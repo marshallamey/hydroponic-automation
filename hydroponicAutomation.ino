@@ -22,7 +22,7 @@
 #define RED 0x1
 #define YELLOW 0x3
 #define GREEN 0x2
-#define TEAL 0x6
+#define TEAL 0x6  
 #define BLUE 0x4
 #define VIOLET 0x5
 #define WHITE 0x7
@@ -37,11 +37,11 @@ boolean input_string_RTD_complete = false;            // have we received all th
 boolean sensor_string_RTD_complete = false;           // have we received all the data from the Atlas Scientific product
 float waterTemp;                                      // Creates a floating point number that is the pH
 
-//String inputstringEC = "";                            // Creates a string to hold incoming data from the PC
-//String sensorstringEC = "";                           // Creates a string to hold the data from the Atlas Scientific product
-//boolean input_string_EC_complete = false;             // have we received all the data from the PC
-//boolean sensor_string_EC_complete = false;            // have we received all the data from the Atlas Scientific product
-//float conductivity;                                   // Creates a floating point number that is the pH
+String inputstringEC = "";                            // Creates a string to hold incoming data from the PC
+String sensorstringEC = "";                           // Creates a string to hold the data from the Atlas Scientific product
+boolean input_string_EC_complete = false;             // have we received all the data from the PC
+boolean sensor_string_EC_complete = false;            // have we received all the data from the Atlas Scientific product
+float conductivity;                                   // Creates a floating point number that is the pH
 
 String inputstringPH = "";                            // Creates a string to hold incoming data from the PC
 String sensorstringPH = "";                           // Creates a string to hold the data from the Atlas Scientific product
@@ -60,13 +60,13 @@ float oxygen;                                         // Creates a floating poin
 void setup() {                                        // Set up the hardware
   Serial.begin(9600);                                 // Set baud rate for the hardware serial port_0 to 9600
   Serial1.begin(9600);                                // Set baud rate for the hardware serial port_0 to 9600
-  //Serial2.begin(9600);                                // set baud rate for software serial port_3 to 9600
+  Serial2.begin(9600);                                // set baud rate for software serial port_3 to 9600
   Serial3.begin(9600);                                // set baud rate for software serial port_3 to 9600
   Serial4.begin(9600);                                // set baud rate for software serial port_3 to 9600
   inputstringRTD.reserve(10);                         // Set aside some bytes for receiving data from the PC
   sensorstringRTD.reserve(30);                        // Set aside some bytes for receiving data from Atlas Scientific product
-  //inputstringEC.reserve(10);                          // Set aside some bytes for receiving data from the PC
-  //sensorstringEC.reserve(30);                         // Set aside some bytes for receiving data from Atlas Scientific product
+  inputstringEC.reserve(10);                          // Set aside some bytes for receiving data from the PC
+  sensorstringEC.reserve(30);                         // Set aside some bytes for receiving data from Atlas Scientific product
   inputstringPH.reserve(10);                          // Set aside some bytes for receiving data from the PC
   sensorstringPH.reserve(30);                         // Set aside some bytes for receiving data from Atlas Scientific product
   inputstringDO.reserve(10);                          // Set aside some bytes for receiving data from the PC
@@ -105,15 +105,15 @@ void serialEvent() {                                  // FOR TYPING COMMANDS IN 
 
 void readData() {                                     // *****FUNCTION TO READ DATA FROM SENSORS***** //
   
-  sensorstringRTD = Serial1.readStringUntil(13);         //read the string until we see a <CR>
-  sensor_string_RTD_complete = true;                      //set the flag used to tell if we have received a completed string from the PC
+  sensorstringRTD = Serial1.readStringUntil(13);      //read the string until we see a <CR>
+  sensor_string_RTD_complete = true;                  //set the flag used to tell if we have received a completed string from the PC
   
-  //  sensorstringEC = Serial2.readStringUntil(13);         //read the string until we see a <CR>
-  //  sensor_string_EC_complete = true; 
+  sensorstringEC = Serial2.readStringUntil(13);       //read the string until we see a <CR>
+  sensor_string_EC_complete = true; 
   
-  sensorstringPH = Serial3.readStringUntil(13);         //read the string until we see a <CR>
+  sensorstringPH = Serial3.readStringUntil(13);       //read the string until we see a <CR>
   sensor_string_PH_complete = true;
-
+ 
   if (Serial4.available() > 0) {                      // If we see that the Atlas Scientific DO has sent a character
     char inchar = (char)Serial4.read();               // Get the char we just received
     sensorstringDO += inchar;                         // Add the char to the var called sensorstring
@@ -121,6 +121,7 @@ void readData() {                                     // *****FUNCTION TO READ D
       sensor_string_DO_complete = true;               // Set the flag
     }
   } 
+ 
 }
 
 
@@ -160,7 +161,20 @@ void getData () {                                     // *****FUNCTION TO PRINT 
     sensorstringPH = "";                              // Clear the string
     sensor_string_PH_complete = false;                // Reset the flag used to tell if we have received a completed string from the Atlas Scientific product
   }
-    
+  
+                                                       // CONDUCTIVITY DATA (DO) //
+                                                  
+  if (sensor_string_EC_complete == true) {            // If a string from the Atlas Scientific product has been received in its entirety
+    if (isdigit(sensorstringEC[0])) {                 // If the first character in the string is a digit
+      oxygen = sensorstringEC.toFloat();              // Convert the string to a floating point number so it can be evaluated by the Arduino                            
+      
+        Serial.print("Conductivity: ");
+        Serial.print(conductivity);
+        Serial.print("\t\t");
+    }
+      sensorstringEC = "";                            // Clear the string
+      sensor_string_EC_complete = false;              // Reset the flag used to tell if we have received a completed string from the Atlas Scientific product
+  }     
                                                       // DISSOLVED OXYGEN DATA (DO) //
                                                   
   if (sensor_string_DO_complete == true) {            // If a string from the Atlas Scientific product has been received in its entirety
