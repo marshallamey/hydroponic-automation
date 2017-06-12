@@ -5,7 +5,7 @@
 //An Arduino UNO was used to test this code.
 
 
-#include <SoftwareSerial.h>                           // Include the SoftwareSerial library for pH sensor
+#include <SoftwareSerial.h>                           // Include the SoftwareSerial library for DO sensor
 #include "DHT.h"                                      // Include the DHT library for DHT22 sensor
 #include <Wire.h>
 #include <Adafruit_MCP23017.h>
@@ -14,8 +14,8 @@
 //#define DHTTYPE DHT11   // DHT 11                   // Uncomment the DHT type you're using
 //#define DHTTYPE DHT21   // DHT 21 (AM2301)
 #define DHTTYPE DHT22   // DHT 22  (AM2302), (AM2321)
-#define RX 11                                         // Define RX pin for DO sensor
-#define TX 10                                         // Define TX pin for DO sensor
+#define RX 11
+#define TX 12
 #define DHTPIN 4                                      // Define D/O pin for DHT sensor
 
 // These #defines make it easy to set the backlight color of LCD
@@ -76,59 +76,87 @@ void setup() {                                        // Set up the hardware
   dht.begin();                                        // Start DHT sensor
   lcd.begin(16, 2);                                   // Start LCD screen
   lcd.print("Collecting data...");
+  uint8_t i=0; 
 }
 
 
-
 void loop() {                                         // *****LOOP FUNCTION***** //
-  uint8_t i=0;
-  readData ();
- 
+  
   if (input_string_PH_complete == true) {             // FOR SENDING COMMANDS TO ATLAS SENSOR
     Serial3.print(inputstringPH);                     // If a string from the PC has been received in its entirety, send that string to the Atlas Scientific product
     Serial3.print('\r');                              // Add a <CR> to the end of the string
     inputstringPH = "";                               // Clear the string
     input_string_PH_complete = false;                 // Reset the flag used to tell if we have received a completed string from the PC
   }
-  
-  getData ();
+  readData ();
+
   LCD ();
 }
 
 
 
-void serialEvent() {                                  // FOR TYPING COMMANDS IN SERIAL MONITOR
-  inputstringRTD = Serial.readStringUntil(13);           // If the hardware serial port_0 receives a char, read the string until we see a <CR>
-  input_string_RTD_complete = true;                       // Set the flag used to tell if we have received a completed string from the PC
-}
+//void serialEvent() {                                  // FOR TYPING COMMANDS IN SERIAL MONITOR
+//  inputstringRTD = Serial.readStringUntil(13);           // If the hardware serial port_0 receives a char, read the string until we see a <CR>
+//  input_string_RTD_complete = true;                       // Set the flag used to tell if we have received a completed string from the PC
+//}
 
 
 void readData() {                                     // *****FUNCTION TO READ DATA FROM SENSORS***** //
   
   sensorstringRTD = Serial1.readStringUntil(13);      //read the string until we see a <CR>
-  sensor_string_RTD_complete = true;                  //set the flag used to tell if we have received a completed string from the PC
+  waterTemp = sensorstringRTD.toFloat();
+  //waterTemp = waterTemp*1.8+32;                   // Convert from Celsius to Fahrenheit
+        Serial.print("Water Temperature: ");
+        Serial.print(waterTemp);
+        Serial.print("\t");
+// sensor_string_RTD_complete = true;                  //set the flag used to tell if we have received a completed string from the PC
   
   sensorstringEC = Serial2.readStringUntil(13);       //read the string until we see a <CR>
-  sensor_string_EC_complete = true; 
+  conductivity = sensorstringEC.toFloat();              // Convert the string to a floating point number so it can be evaluated by the Arduino                            
+      
+        Serial.print("Conductivity: ");
+        Serial.print(conductivity);
+        Serial.print("\t\t");
+        
+  
+  //sensor_string_EC_complete = true; 
   
   sensorstringPH = Serial3.readStringUntil(13);       //read the string until we see a <CR>
-  sensor_string_PH_complete = true;
- 
+  pH = sensorstringPH.toFloat();                  // Convert the string to a floating point number so it can be evaluated by the Arduino
+      Serial.print("pH: ");                           // If a string from the Atlas Scientific product has been received in its entirety
+      Serial.print(pH);                               // Send that string to the PC's serial monitor
+      if (pH >= 7.0) {                                // If the pH is greater than or equal to 7.0
+        Serial.print(" (high)");                      // Print "high" this is demonstrating that the Arduino is evaluating the pH as a number and not as a string
+        Serial.print("\t\t");     
+      }
+      if (pH <= 6.999 && pH >= 5.001) {               // If the pH is 5.0 and 7.0
+        Serial.print(" (normal)");                    // Print "low" this is demonstrating that the Arduino is evaluating the pH as a number and not as a string
+        Serial.print("\t\t");
+      }
+      if (pH <= 5.000) {                              // If the pH is less than or equal to 5.0
+        Serial.print(" (low)");                       // Print "low" this is demonstrating that the Arduino is evaluating the pH as a number and not as a string
+        Serial.print("\t\t");
+  //sensor_string_PH_complete = true;
+  
+
   if (Serial4.available() > 0) {                      // If we see that the Atlas Scientific DO has sent a character
     char inchar = (char)Serial4.read();               // Get the char we just received
     sensorstringDO += inchar;                         // Add the char to the var called sensorstring
-    if (inchar == '\r') {                             // If the incoming character is a <CR>
-      sensor_string_DO_complete = true;               // Set the flag
-    }
+     oxygen = sensorstringDO.toFloat();              // Convert the string to a floating point number so it can be evaluated by the Arduino                            
+      
+        Serial.print("Dissolved Oxygen: ");
+        Serial.print(oxygen);
+        Serial.print("\t\t");
   } 
  
-}
+ 
+      }}
 
 
-void getData () {                                     // *****FUNCTION TO PRINT DATA TO SERIAL MONITOR***** //
+/*void getData () {                                     // *****FUNCTION TO PRINT DATA TO SERIAL MONITOR***** //
   
                                                       // WATER TEMPERATURE DATA (RTD) //
-  if (sensor_string_RTD_complete == true) {           // If a string from the Atlas Scientific product has been received in its entirety
+ if (sensor_string_RTD_complete == true) {           // If a string from the Atlas Scientific product has been received in its entirety
     if (isdigit(sensorstringRTD[0])) {                // If the first character in the string is a digit
       waterTemp = sensorstringRTD.toFloat();          // Convert the string to a floating point number so it can be evaluated by the Arduino        
       waterTemp = waterTemp*1.8+32;                   // Convert from Celsius to Fahrenheit
@@ -161,7 +189,7 @@ void getData () {                                     // *****FUNCTION TO PRINT 
     sensorstringPH = "";                              // Clear the string
     sensor_string_PH_complete = false;                // Reset the flag used to tell if we have received a completed string from the Atlas Scientific product
   }
-  
+
                                                        // CONDUCTIVITY DATA (DO) //
                                                   
   if (sensor_string_EC_complete == true) {            // If a string from the Atlas Scientific product has been received in its entirety
@@ -188,7 +216,7 @@ void getData () {                                     // *****FUNCTION TO PRINT 
       sensorstringDO = "";                            // Clear the string
       sensor_string_DO_complete = false;              // Reset the flag used to tell if we have received a completed string from the Atlas Scientific product
   }   
-}
+}  */
 
 void LCD () {                                            // *****FUNCTION TO PRINT DATA TO LCD SCREEN***** //
   
@@ -211,7 +239,7 @@ void LCD () {                                            // *****FUNCTION TO PRI
   Serial.print("Temperature: ");
   Serial.print(f);
   Serial.println(" *F");
-  Serial.println(sensorstringRTD); 
+  
   
   uint8_t buttons = lcd.readButtons();                   //  ?????????????????
  
@@ -230,7 +258,7 @@ void LCD () {                                            // *****FUNCTION TO PRI
   lcd.print(pH);
   lcd.print(" ");
   lcd.print("EC ");
-  lcd.print(oxygen);
+  lcd.print(conductivity);
   lcd.print("");
   
   delay (seconds);                                       // Pause before displaying more information
@@ -283,6 +311,7 @@ void LCD () {                                            // *****FUNCTION TO PRI
     }
   }  
 }
+
 
 
 
