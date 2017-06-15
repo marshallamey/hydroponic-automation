@@ -30,8 +30,9 @@ Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 #define WHITE 0x7
 
 unsigned long lastInput = 0; // last button press
+int level = 1;
 
-enum operatingState {TOP, RIGHT, TUNE_P, TUNE_I, TUNE_D, AUTO};
+enum operatingState {TOP, RIGHT, SENSORS, UTILITIES};
 operatingState opState = TOP;
 
 void setup() {
@@ -50,9 +51,7 @@ void setup() {
 }
 
 //uint8_t i=0;
-//
-//enum operatingState { TOP, RIGHT};
-//operatingState opState = TOP;
+
 
 void loop()
 {
@@ -66,16 +65,18 @@ void loop()
    case TOP:
       Top();
       break;
-   case RIGHT:
-      Right();
+   case SENSORS:
+      Sensors();
+      break;
+   case UTILITIES:
+      Utilities();
       break;
    }
 }
 
 void Top(){
   {
-   //lcd.setBacklight(TEAL);
-   lcd.print("TOP");
+   // lcd.clear();
    uint8_t buttons = 0;
    while(true)
    {
@@ -83,39 +84,116 @@ void Top(){
 
       if (buttons & BUTTON_RIGHT)
       {
-         opState = RIGHT;
-         return;
-    
-      if ((millis() - lastInput) > 3000)  // return to RUN after 3 seconds idle
+        if(level == 1){
+          opState = SENSORS;
+          return;
+        }
+
+        if(level == 2){
+          //level = 1;
+          opState = UTILITIES;
+          return;
+        }
+      }
+
+      if (buttons & BUTTON_UP)
       {
-         opState = TOP;
+         level = level-1;
          return;
+      }
+
+      if (buttons & BUTTON_DOWN)
+      {
+         level = level+1;
+         return;
+      }
+
+      if(level == 1){
+        lcd.setCursor(0, 0);
+        lcd.print(">");
+        lcd.setCursor(1, 0);
+        lcd.print("Sensors");
+        lcd.setCursor(1, 1);
+        lcd.print("Utilities");
+        }
+
+      if(level == 2){
+        lcd.setCursor(1, 0);
+        lcd.print("Sensors");
+        lcd.setCursor(0, 1);
+        lcd.print(">");
+        lcd.print("Utilities");
+        }
+        
+
+      
+      if ((millis() - lastInput) > 10000 && level > 1)  // return to RUN after 10 seconds idle
+      {
+        lcd.clear();
+        level = 1;
       }
       //DoControl();
    }
-}}}
+}}
 
-void Right(){
+void Sensors(){
   {
-   //lcd.setBacklight(TEAL);
-   lcd.print("RIGHT-->");
+   //lcd.clear();
+   lcd.print(">");
+   lcd.print("PH");
    uint8_t buttons = 0;
    while(true)
    {
       buttons = ReadButtons();
 
-      if (buttons & BUTTON_RIGHT)
-      {
-         opState = RIGHT;
-         return;
-      }
-    
-      if ((millis() - lastInput) > 3000)  // return to RUN after 3 seconds idle
+//      if (buttons & BUTTON_RIGHT)
+//      {
+//         opState = RIGHT;
+//         return;
+//      }
+
+      if (buttons & BUTTON_LEFT)
       {
          opState = TOP;
          return;
       }
-//      DoControl();
+    
+      if ((millis() - lastInput) > 10000)  // return to RUN after 10 seconds idle
+      {
+         opState = TOP;
+         return;
+      }
+   }
+}
+}
+
+void Utilities(){
+  {
+   //lcd.clear();
+   lcd.print(">");
+   lcd.print("Pumps");
+   uint8_t buttons = 0;
+   while(true)
+   {
+      buttons = ReadButtons();
+
+//      if (buttons & BUTTON_RIGHT)
+//      {
+//         opState = RIGHT;
+//         return;
+//      }
+
+      if (buttons & BUTTON_LEFT)
+      {
+         opState = TOP;
+         return;
+      }
+    
+      if ((millis() - lastInput) > 10000)  // return to RUN after 10 seconds idle
+      {
+         opState = TOP;
+         return;
+      }
    }
 }
 }
@@ -129,4 +207,3 @@ uint8_t ReadButtons()
   }
   return buttons;
 }
-
