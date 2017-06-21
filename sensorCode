@@ -172,7 +172,7 @@ void sensorCommunication() {                      // *****SENDING COMMANDS TO AT
     }
 
     else if (pointerString == "PH") {               // SEND TO PH SENSOR
-      sensorStringPH = "";
+      
       Serial3.print(commandString);
       Serial3.print('\r');
       while (sensorStringPHComplete == false) {
