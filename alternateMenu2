@@ -1,0 +1,146 @@
+
+/*********************
+
+Example code for the Adafruit RGB Character LCD Shield and Library
+
+This code displays text on the shield, and also reads the buttons on the keypad.
+When a button is pressed, the backlight changes color.
+
+**********************/
+
+// include the library code:
+#include <Wire.h>
+#include <Adafruit_MCP23017.h>
+#include <Adafruit_RGBLCDShield.h>
+
+// The shield uses the I2C SCL and SDA pins. On classic Arduinos
+// this is Analog 4 and 5 so you can't use those for analogRead() anymore
+// However, you can connect other I2C sensors to the I2C bus and share
+// the I2C bus.
+Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
+//States for the menu.
+int currentMenuItem = 0;
+int lastState = 0;
+
+void setup() {
+  //Set the characters and column numbers.
+  lcd.begin(16, 2);
+  //Print default title.
+  clearPrintTitle();
+}
+
+void loop() {
+  //Call the main menu.
+  mainMenu();
+}
+
+void mainMenu() {
+  uint8_t buttons = lcd.readButtons();
+  //State = 0 every loop cycle.
+  int state = 0;
+  //Refresh the button pressed.
+  int x = analogRead(0);
+  //Set the Row 0, Col 0 position.
+ //lcd.clear();
+  lcd.setCursor(0, 0);
+
+  //if (buttons) {
+    if (buttons & BUTTON_UP) {
+      state = 1;
+    }
+    else if (buttons & BUTTON_DOWN) {
+      state = 2;
+    }
+   /* else if (buttons & BUTTON_LEFT) {
+      state = 3;
+    }
+    else if (buttons & BUTTON_RIGHT) {
+      state = 4;
+    }*/
+    else if (buttons & BUTTON_SELECT) {
+      state = 5;
+    }
+ // }
+
+  //If we are out of bounds on th menu then reset it.
+  if (currentMenuItem < 0) {
+    currentMenuItem = 2;
+  }
+  else if (currentMenuItem > 2) {
+    currentMenuItem = 0;
+  }
+
+  //If we have changed Index, saves re-draws.
+  if (state != lastState) {
+    if (state == 1) {
+      //If Up
+      currentMenuItem = currentMenuItem - 1;
+      displayMenu(currentMenuItem);
+    }
+    else if (state == 2) {
+      //If Down
+      currentMenuItem = currentMenuItem + 1;
+      displayMenu(currentMenuItem);
+    }
+    else if (state == 5) {
+      //If Selected
+      sensorMenu(currentMenuItem);
+    }
+    //Save the last State to compare.
+    lastState = state;
+  }
+  //Small delay
+  delay(5);
+}
+
+//Display Menu Option based on Index.
+void displayMenu(int state) {
+  switch (state) {
+  case 1:
+    clearPrintTitle();
+    lcd.print("-> Sensors");
+    break;
+  case 2:
+    clearPrintTitle();
+    lcd.print("-> Motors");
+    break;
+  case 3:
+    clearPrintTitle();
+    lcd.print("-> Utilities");
+    break;
+  }
+}
+
+//Print a basic header on Row 1.
+void clearPrintTitle() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("   MAIN  MENU   ");
+  lcd.setCursor(0, 1);
+}
+
+//Show the selection on Screen.
+void sensorMenu(int x) {
+  switch (x) {
+  case 1:
+    clearPrintTitle();
+    lcd.print("Selected Opt 1");
+    //Call the function that belongs to Option 1
+    break;
+  case 2:
+    clearPrintTitle();
+    lcd.print("Selected Opt 2");
+    //Call the function that belongs to Option 2
+    break;
+  case 3:
+    clearPrintTitle();
+    lcd.print("Selected Opt 3");
+    //Call the function that belongs to Option 3
+    break;
+  case 4:
+    clearPrintTitle();
+    lcd.print("Selected Opt 4");
+    //Call the function that belongs to Option 4
+    break;
+  }
+}
