@@ -12,25 +12,23 @@ Make sure to use Carriage Return only
 Baud rate is 9600 bps
 */
 
-
 #include <SoftwareSerial.h>           
 #include <Adafruit_RGBLCDShield.h>
 #include "DHT.h"  
 
-// Establish Serial Port 4
-#define RX 11
-#define TX 10
-SoftwareSerial Serial4(RX, TX);
+// Establish Serial Ports
+SoftwareSerial Serial4(11, 10);
+
 
 // DHT Temperature and Humidity Sensor
 #define DHTPIN 4        
 #define DHTTYPE DHT22   
-DHT dht(DHTPIN, DHTTYPE);     
+DHT dht(DHTPIN, DHTTYPE);
 
 // SENSOR VARIABLES				// POINTERS TO SENSOR (only first 4 are used in this version)
 float waterTemp;				// RTD
 float conductivity;				// EC
-float pH;					// PH
+float pH;						// PH
 float oxygen;					// DO
 float humidity;					// HM**
 float airTemp;					// AT**
@@ -50,8 +48,15 @@ int pump_duration = 10000;
 int lcdPageNumber = 0;
 unsigned long readMillis = 0;
 unsigned long printMillis = 0;
-long readInterval = 10000;                                     
+unsigned long pumpMillis = 0;
+unsigned long phInterval = 0;
+unsigned long ecInterval = 0;
+unsigned long doInterval = 0;
+
+
+long readInterval = 10000;
 long printInterval = 5000;
+long pumpInterval = 2000000;
 
 String commandString = "";
 String pointerString = "";
@@ -65,6 +70,7 @@ void setup() {
 	Serial3.begin(9600);
 	Serial4.begin(9600);
 
+
 	pinMode(pHup_pin, OUTPUT);
 	pinMode(pHdown_pin, OUTPUT);
 	pinMode(fertA_pin, OUTPUT);
@@ -72,7 +78,15 @@ void setup() {
 	pinMode(mixPump_pin, OUTPUT);
 	pinMode(stonePump_pin, OUTPUT);
 	pinMode(water_pin, OUTPUT);
-	
+
+	digitalWrite(pHup_pin, HIGH);
+	digitalWrite(pHdown_pin, HIGH);
+	digitalWrite(fertA_pin, HIGH);
+	digitalWrite(fertB_pin, HIGH);
+	digitalWrite(mixPump_pin, HIGH);
+	digitalWrite(stonePump_pin, HIGH);
+	digitalWrite(water_pin, HIGH);
+
 	Serial.println("Initializing data collection...");
 	dht.begin();
 	lcd.begin(16, 2);
@@ -82,8 +96,8 @@ void setup() {
 
 void loop() {
 
-	unsigned long currentMillis = millis();                     
-	
+	unsigned long currentMillis = millis();
+
 	if (Serial.available() > 0) {
 		sendCommand();
 	}
@@ -92,7 +106,7 @@ void loop() {
 		readMillis = currentMillis;
 		readData();
 		//thingSpeak();
-		//monitorSolution();
+		monitorSolution();
 	}
 
 	if (currentMillis - printMillis > printInterval) {
@@ -117,27 +131,27 @@ void sendCommand() {
 }
 
 void getPointer() {
-	 
-	 boolean pointerStringComplete = false;
-	 pointerString = Serial.readStringUntil(13);
-	 if (pointerString.length() > 0) {
-		 pointerStringComplete = true;
-	 }
-	 Serial.print("Sending to: ");
-	 Serial.println(pointerString);
+
+	boolean pointerStringComplete = false;
+	pointerString = Serial.readStringUntil(13);
+	if (pointerString.length() > 0) {
+		pointerStringComplete = true;
+	}
+	Serial.print("Sending to: ");
+	Serial.println(pointerString);
 }
- 
+
 void getCommand() {
 
 	boolean commandStringComplete = false;
 	Serial.print("Enter a command: ");
 
 	while (commandStringComplete == false) {
-		commandString = Serial.readStringUntil(13);	
+		commandString = Serial.readStringUntil(13);
 		if (commandString.length() > 0) {
 			commandStringComplete = true;
 		}
-	}	
+	}
 	Serial.println(commandString);
 }
 
@@ -224,6 +238,7 @@ void sendToDO() {
 	sendStringDO = Serial4.readStringUntil(13);
 	sendStringDO = "";
 }
+
 /*************************************************************************************
 *				READING DATA FROM SENSORS
 **************************************************************************************/
@@ -337,7 +352,7 @@ void getOxygen() {
 	Serial.print("Dissolved Oxygen: ");
 	Serial.print("\t");
 	Serial.print(oxygen);
-	Serial.println(" mg/L");	
+	Serial.println(" mg/L");
 }
 
 //void getCarbon() {}
@@ -345,7 +360,7 @@ void getOxygen() {
 void getAirTemp() {
 	airTemp = dht.readTemperature(true);
 	if (isnan(airTemp)) {
-		Serial.println("Failed to read air temperature!");		
+		Serial.println("Failed to read air temperature!");
 	}
 	else {
 		Serial.print("\t\t\t");
@@ -373,25 +388,25 @@ void getHumidity() {
 }
 
 //void getFlowRate() {}
-	
+
 /*************************************************************************************
 *		MONITORING AND FIXING THE NUTRIENT SOLUTION
 *		You can change the parameters of your variables here
 **************************************************************************************/
-void monitorSolution(){
+void monitorSolution() {
 
 	float pH_high = 6.5;
 	float pH_low = 5.5;
-	float conductivity_high = 5000;
+	float conductivity_high = 20000;
 	float conductivity_low = 2000;
 	float oxygen_high = 5000;
 	float oxygen_low = 2000;
 	float wt_high = 80.0;
 	float wt_low = 70.0;
 
-	if (pH < pH_low) { raisePH(); }	
+	if (pH < pH_low) { raisePH(); }
 	if (pH > pH_high) { lowerPH(); }
-	if (conductivity < conductivity_low) { raiseConductivity(); }		
+	if (conductivity < conductivity_low) { raiseConductivity(); }
 	//if (conductivity > conductivity_high) { lowerConductivity(); }		
 	if (oxygen < oxygen_low) { raiseOxygenLevel(); }
 	//if (oxygen > oxygen_high) { lowerOxygenLevel(); }
@@ -400,39 +415,57 @@ void monitorSolution(){
 }
 
 void raisePH() {
-	digitalWrite(pHup_pin, HIGH);
-	digitalWrite(mixPump_pin, HIGH);
-	delay(pump_duration);
 	digitalWrite(pHup_pin, LOW);
 	digitalWrite(mixPump_pin, LOW);
+
+	while (phInterval < pumpInterval) {	
+		++phInterval;
+	}
+	digitalWrite(pHup_pin, HIGH);
+	digitalWrite(mixPump_pin, HIGH);
+	phInterval = 0;
 }
 
 void lowerPH() {
-	digitalWrite(pHdown_pin, HIGH);
-	digitalWrite(mixPump_pin, HIGH);
-	delay(pump_duration);
 	digitalWrite(pHdown_pin, LOW);
 	digitalWrite(mixPump_pin, LOW);
+
+	while (phInterval < pumpInterval) {
+		++phInterval;
+	}
+	digitalWrite(pHdown_pin, HIGH);
+	digitalWrite(mixPump_pin, HIGH);
+	phInterval = 0;
 }
 
 void raiseConductivity() {
-	digitalWrite(fertA_pin, HIGH);
-	digitalWrite(fertB_pin, HIGH);
-	digitalWrite(mixPump_pin, HIGH);
-	delay(pump_duration);
 	digitalWrite(fertA_pin, LOW);
 	digitalWrite(fertB_pin, LOW);
 	digitalWrite(mixPump_pin, LOW);
+
+	while (ecInterval < pumpInterval) {
+		++ecInterval;
+	}
+	digitalWrite(fertA_pin, HIGH);
+	digitalWrite(fertB_pin, HIGH);		
+	digitalWrite(mixPump_pin, HIGH);
+	ecInterval = 0;
+	
 }
 
 //void lowerConductivity() {}
 
 void raiseOxygenLevel() {
-	digitalWrite(stonePump_pin, HIGH);
-	digitalWrite(mixPump_pin, HIGH);
-	delay(pump_duration);
 	digitalWrite(stonePump_pin, LOW);
 	digitalWrite(mixPump_pin, LOW);
+
+	while (doInterval < pumpInterval) {
+		++doInterval;
+	}
+
+	digitalWrite(stonePump_pin, HIGH);
+	digitalWrite(mixPump_pin, HIGH);
+	doInterval = 0;
 }
 
 //void lowerOxygenLevel() {}
@@ -444,7 +477,7 @@ void raiseOxygenLevel() {
 /*************************************************************************************
 *			SENDING DATA TO THE INTERNET
 **************************************************************************************/
-void thingSpeak(){}
+void thingSpeak() {}
 /*************************************************************************************
 *			MENU FOR THE LCD DISPLAY
 **************************************************************************************/
@@ -458,7 +491,7 @@ void lcdMenu() {
 	else {
 		printPageNumber1();
 		lcdPageNumber = 0;
-	}	
+	}
 }
 
 void printPageNumber0() {
