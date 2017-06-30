@@ -9,12 +9,17 @@
 
 class WaterTemperature {
 
+  private:
+    String commandString;
+    String sendStringRTD;
+    String readStringRTD;
+    float waterTemp;
+
   public:
-   
- 
-  //Sends command to RTD sensor 
+
+  //Sends command to RTD sensor
   void sendCommand() {
-      
+
 
       Serial1.print(commandString);
       Serial1.print('\r');
@@ -35,7 +40,7 @@ class WaterTemperature {
 
   // Reads water temperature data
   float readData() {
-     
+
 
       Serial1.print('R');
       Serial1.print('\r');
@@ -48,11 +53,11 @@ class WaterTemperature {
       readStringRTD = Serial1.readStringUntil(13);
       return waterTemp;
   }
-  
-  
+
+
   // Prints water temperature data
   void printData() {
-    
+
     Serial.print("Reading RTD: ");
     Serial.print(readStringRTD);
     Serial.print("\t");
@@ -69,10 +74,9 @@ class WaterTemperature {
   //void lowerWaterTemp() {}
 
   // Private variables
-  private:
-  float waterTemp;
 };
 
 
-#endif
 
+
+#endif
