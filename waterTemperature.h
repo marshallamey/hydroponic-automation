@@ -17,10 +17,27 @@ class WaterTemperature {
 
   public:
 
+  //Constructor
+  WaterTemperature(){}
+
+  //Gets command to RTD sensor from user
+  String getCommand() {
+
+  boolean commandStringComplete = false;
+  Serial.print("Enter a command: ");
+
+  while (commandStringComplete == false) {
+    commandString = Serial.readStringUntil(13);
+    if (commandString.length() > 0) {
+      commandStringComplete = true;
+    }
+  }
+  Serial.println(commandString);
+  return commandString;
+}
+
   //Sends command to RTD sensor
   void sendCommand() {
-
-
       Serial1.print(commandString);
       Serial1.print('\r');
       Serial.print("Response from RTD: ");
@@ -36,12 +53,12 @@ class WaterTemperature {
 
       sendStringRTD = Serial1.readStringUntil(13);
       sendStringRTD = "";
+      commandString = "";
   }
 
   // Reads water temperature data
   float readData() {
-
-
+    
       Serial1.print('R');
       Serial1.print('\r');
 
@@ -49,7 +66,6 @@ class WaterTemperature {
       waterTemp = readStringRTD.toFloat();
       waterTemp = waterTemp*1.8 + 32;
       readStringRTD = "";
-
       readStringRTD = Serial1.readStringUntil(13);
       return waterTemp;
   }
@@ -73,7 +89,15 @@ class WaterTemperature {
 
   //void lowerWaterTemp() {}
 
-  // Private variables
+
+  //Accessor Functions
+  //void setWaterTemp(float WT){
+  //  waterTemp = WT
+  //}
+  
+  float getWaterTemp(){
+    return waterTemp;
+  }
 };
 
 
