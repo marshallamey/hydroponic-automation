@@ -14,6 +14,7 @@ Baud rate is 9600 bps
 
 #include <SoftwareSerial.h>           
 #include <Adafruit_RGBLCDShield.h>
+#include "waterTemperature.h"
 #include "DHT.h"  
 
 // Establish Serial Ports
@@ -46,6 +47,7 @@ int water_pin = 36;
 
 int pump_duration = 10000;
 int lcdPageNumber = 0;
+unsigned long currentMillis;
 unsigned long readMillis = 0;
 unsigned long printMillis = 0;
 unsigned long pumpMillis = 0;
@@ -56,7 +58,7 @@ unsigned long doInterval = 0;
 
 long readInterval = 10000;
 long printInterval = 5000;
-long pumpInterval = 2000000;
+long pumpInterval = 5000;
 
 String commandString = "";
 String pointerString = "";
@@ -96,15 +98,27 @@ void setup() {
 
 void loop() {
 
-	unsigned long currentMillis = millis();
+	currentMillis = millis();
+	WaterTemperature RTD;
+
 
 	if (Serial.available() > 0) {
-		sendCommand();
+		getPointer();
+		getCommand();
+		Serial.println("Sending command");
+		if (pointerString == "RTD") { RTD.sendCommand(); }
+		else if (pointerString == "EC") { sendTOEC(); }
+		else if (pointerString == "PH") { sendToPH(); }
+		else if (pointerString == "DO") { sendToDO(); }
+		pointerString = "";
+		commandString = "";
 	}
 
 	if (currentMillis - readMillis > readInterval) {
 		readMillis = currentMillis;
 		readData();
+		RTD.readData();
+		RTD.printData();
 		//thingSpeak();
 		monitorSolution();
 	}
@@ -118,17 +132,6 @@ void loop() {
 /*************************************************************************************
 *			SENDING COMMANDS TO SENSORS
 **************************************************************************************/
-void sendCommand() {
-	getPointer();
-	getCommand();
-	Serial.println("Sending command");
-	if (pointerString == "RTD") { sendToRTD(); }
-	else if (pointerString == "EC") { sendTOEC(); }
-	else if (pointerString == "PH") { sendToPH(); }
-	else if (pointerString == "DO") { sendToDO(); }
-	pointerString = "";
-	commandString = "";
-}
 
 void getPointer() {
 
@@ -154,7 +157,7 @@ void getCommand() {
 	}
 	Serial.println(commandString);
 }
-
+/*
 void sendToRTD() {
 	String sendStringRTD = "";
 	sendStringRTD.reserve(30);
@@ -175,6 +178,7 @@ void sendToRTD() {
 	sendStringRTD = Serial1.readStringUntil(13);
 	sendStringRTD = "";
 }
+*/
 
 void sendTOEC() {
 	String sendStringEC = "";
@@ -245,7 +249,7 @@ void sendToDO() {
 void readData() {
 
 	Serial.println("Reading sensors... ");
-	getWaterTemp();
+	
 	getConductivity();
 	getPH();
 	getOxygen();
@@ -255,7 +259,7 @@ void readData() {
 	//getFlowRate();
 }
 
-void getWaterTemp() {
+/*void getWaterTemp() {
 	String readStringRTD = "";
 	readStringRTD.reserve(30);
 
@@ -278,7 +282,7 @@ void getWaterTemp() {
 	Serial.print(waterTemp);
 	Serial.println(" *F");
 
-}
+}*/
 
 void getConductivity() {
 	String readStringEC = "";
@@ -417,13 +421,15 @@ void monitorSolution() {
 void raisePH() {
 	digitalWrite(pHup_pin, LOW);
 	digitalWrite(mixPump_pin, LOW);
+	phInterval = millis();
+	currentMillis = millis();
 
-	while (phInterval < pumpInterval) {	
-		++phInterval;
+	while (currentMillis - phInterval < pumpInterval) {	
+		currentMillis = millis();
 	}
+
 	digitalWrite(pHup_pin, HIGH);
 	digitalWrite(mixPump_pin, HIGH);
-	phInterval = 0;
 }
 
 void lowerPH() {
