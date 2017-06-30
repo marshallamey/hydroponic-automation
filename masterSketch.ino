@@ -25,7 +25,7 @@ SoftwareSerial Serial4(11, 10);
 DHT dht(DHTPIN, DHTTYPE);
 
 // SENSOR VARIABLES        // POINTERS TO SENSOR (only first 4 are used in this version)
-float waterTemp;        // RTD
+// RTD
 float conductivity;       // EC
 float pH;           // PH
 float oxygen;         // DO
@@ -58,8 +58,10 @@ long readInterval = 10000;
 long printInterval = 5000;
 long pumpInterval = 5000;
 
+String whichSensorString = "";
 String commandString = "";
-String pointerString = "";
+
+ WaterTemperature RTD;
 
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 
@@ -97,26 +99,25 @@ void setup() {
 void loop() {
 
   currentMillis = millis();
-  WaterTemperature RTD;
-
-
+ 
   if (Serial.available() > 0) {
-    getPointer();
-    getCommand();
+    whichSensor();
+    RTD.getCommand();
     Serial.println("Sending command");
-    if (pointerString == "RTD") { RTD.sendCommand(); }
-    else if (pointerString == "EC") { sendTOEC(); }
-    else if (pointerString == "PH") { sendToPH(); }
-    else if (pointerString == "DO") { sendToDO(); }
-    pointerString = "";
-    commandString = "";
+    if (whichSensorString == "RTD") { RTD.sendCommand(); }
+    else if (whichSensorString == "EC") { sendTOEC(); }
+    else if (whichSensorString == "PH") { sendToPH(); }
+    else if (whichSensorString == "DO") { sendToDO(); }
+    whichSensorString = "";
+    
   }
 
   if (currentMillis - readMillis > readInterval) {
     readMillis = currentMillis;
-    readData();
     RTD.readData();
     RTD.printData();
+    readData();
+    
     //thingSpeak();
     monitorSolution();
   }
@@ -130,49 +131,18 @@ void loop() {
 /*************************************************************************************
 *     SENDING COMMANDS TO SENSORS
 **************************************************************************************/
-
-void getPointer() {
-
-  boolean pointerStringComplete = false;
-  pointerString = Serial.readStringUntil(13);
-  if (pointerString.length() > 0) {
-    pointerStringComplete = true;
+// To determine which sensor to send a command to
+void whichSensor() {
+  boolean whichSensorComplete = false;
+  whichSensorString = Serial.readStringUntil(13);
+  if (whichSensorString.length() > 0) {
+    whichSensorComplete = true;
   }
   Serial.print("Sending to: ");
-  Serial.println(pointerString);
+  Serial.println(whichSensorString);
 }
 
-void getCommand() {
 
-  boolean commandStringComplete = false;
-  Serial.print("Enter a command: ");
-
-  while (commandStringComplete == false) {
-    commandString = Serial.readStringUntil(13);
-    if (commandString.length() > 0) {
-      commandStringComplete = true;
-    }
-  }
-  Serial.println(commandString);
-}
-/*
-void sendToRTD() {
-  String sendStringRTD = "";
-  sendStringRTD.reserve(30);
-  Serial1.print(commandString);
-  Serial1.print('\r');
-  Serial.print("Response from RTD: ");
-  sendStringRTD = Serial1.readStringUntil(13);
-  Serial.println(sendStringRTD);
-  sendStringRTD = "";
-  sendStringRTD = Serial1.readStringUntil(13);
-  Serial.println(sendStringRTD);
-  Serial.println();
-  sendStringRTD = "";
-  sendStringRTD = Serial1.readStringUntil(13);
-  sendStringRTD = "";
-}
-*/
 
 void sendTOEC() {
   String sendStringEC = "";
@@ -492,7 +462,7 @@ void lcdMenu() {
 void printPageNumber0() {
   lcd.clear();
   lcd.setCursor(0, 0);
-  int wtemp = waterTemp;
+  int wtemp = RTD.getWaterTemp();
   int atemp = airTemp;
   lcd.print("H20 ");
   lcd.print(wtemp);
