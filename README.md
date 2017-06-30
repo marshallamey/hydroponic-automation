@@ -8,6 +8,6 @@ Summer 2017
 
 Original contributors:
 Marshall Amey,
-Kathy Alfaro,
+Kathya Alfaro,
 Isaac Olson,
 and Madeline Wrzesinski
