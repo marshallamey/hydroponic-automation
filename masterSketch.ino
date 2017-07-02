@@ -1,3 +1,4 @@
+
 /*
 This is a program to automate and control the parameters of a hydroponic garden.
 Code was designed to be run with an Arduino Mega 2560
@@ -12,27 +13,15 @@ Baud rate is 9600 bps
 
 #include <SoftwareSerial.h>           
 #include <Adafruit_RGBLCDShield.h>
-#include "waterTemperature.h"
+#include "Sensor.h"
 #include "DHT.h"  
 
-// Establish Serial Ports
-SoftwareSerial Serial4(11, 10);
 
 
 // DHT Temperature and Humidity Sensor
-#define DHTPIN 4        
-#define DHTTYPE DHT22   
-DHT dht(DHTPIN, DHTTYPE);
-
-// SENSOR VARIABLES        // POINTERS TO SENSOR (only first 4 are used in this version)
-float waterTemp;        // RTD
-float conductivity;       // EC
-float pH;           // PH
-float oxygen;         // DO
-float humidity;         // HM**
-float airTemp;          // AT**
-float carbon;         // CO**
-float flowRate;         // FR**
+//#define DHTPIN 4        
+//#define DHTTYPE DHT22   
+//DHT dht(DHTPIN, DHTTYPE);
 
 // MOTOR PIN LOCATIONS
 int pHup_pin = 30;
@@ -43,25 +32,23 @@ int mixPump_pin = 34;
 int stonePump_pin = 35;
 int water_pin = 36;
 
-int pump_duration = 10000;
+String whichSensorString = "";
+
 int lcdPageNumber = 0;
 unsigned long currentMillis;
-unsigned long readMillis = 0;
-unsigned long printMillis = 0;
-unsigned long pumpMillis = 0;
-unsigned long phInterval = 0;
-unsigned long ecInterval = 0;
-unsigned long doInterval = 0;
-
-
-long readInterval = 10000;
-long printInterval = 5000;
+unsigned long previousMillis01 = 0;
+unsigned long previousMillis02 = 0;
+long readInterval = 20000;
+long menuScrollTime = 5000;
 long pumpInterval = 5000;
 
-String commandString = "";
-String pointerString = "";
+Sensor Sensor;
 
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
+
+/*************************************************************************************
+SETUP AND LOOP FUNCTIONS
+*************************************************************************************/
 
 void setup() {
   Serial.begin(9600);
@@ -69,8 +56,7 @@ void setup() {
   Serial2.begin(9600);
   Serial3.begin(9600);
   Serial4.begin(9600);
-
-
+  
   pinMode(pHup_pin, OUTPUT);
   pinMode(pHdown_pin, OUTPUT);
   pinMode(fertA_pin, OUTPUT);
@@ -88,396 +74,111 @@ void setup() {
   digitalWrite(water_pin, HIGH);
 
   Serial.println("Initializing data collection...");
+  Serial.println();
   dht.begin();
   lcd.begin(16, 2);
   lcd.print("Collecting data...");
   uint8_t i = 0;
+  readData();
 }
 
 void loop() {
-
   currentMillis = millis();
-  WaterTemperature RTD;
-
 
   if (Serial.available() > 0) {
-    getPointer();
-    getCommand();
-    Serial.println("Sending command");
-    if (pointerString == "RTD") { RTD.sendCommand(); }
-    else if (pointerString == "EC") { sendTOEC(); }
-    else if (pointerString == "PH") { sendToPH(); }
-    else if (pointerString == "DO") { sendToDO(); }
-    pointerString = "";
-    commandString = "";
+    sendSensorCommand();
   }
-
-  if (currentMillis - readMillis > readInterval) {
-    readMillis = currentMillis;
+  
+  if (currentMillis - previousMillis01 > readInterval) {
+    previousMillis01 = currentMillis; 
     readData();
-    RTD.readData();
-    RTD.printData();
-    //thingSpeak();
-    monitorSolution();
+    printToSerial();
+    //printToInternet();
+    //monitorSolution();
   }
 
-  if (currentMillis - printMillis > printInterval) {
-    printMillis = currentMillis;
-    lcdMenu();
+  if (currentMillis - previousMillis02 > menuScrollTime) {
+    previousMillis02 = currentMillis;   
+    printToLCD();
   }
 }
 
-/*************************************************************************************
-*     SENDING COMMANDS TO SENSORS
-**************************************************************************************/
+/******************************************************************************************
+SEND FUNCTIONS
+******************************************************************************************/
 
-void getPointer() {
-
-  boolean pointerStringComplete = false;
-  pointerString = Serial.readStringUntil(13);
-  if (pointerString.length() > 0) {
-    pointerStringComplete = true;
-  }
-  Serial.print("Sending to: ");
-  Serial.println(pointerString);
-}
-
-void getCommand() {
-
-  boolean commandStringComplete = false;
-  Serial.print("Enter a command: ");
-
-  while (commandStringComplete == false) {
-    commandString = Serial.readStringUntil(13);
-    if (commandString.length() > 0) {
-      commandStringComplete = true;
+// SEND A COMMAND TO AN ATLAS SCIENTIFIC SENSOR
+void sendSensorCommand() {
+    whichSensor();
+    if (whichSensorString == "WT") { 
+      Sensor.getCommand(); 
+      Sensor.WTsendCommand(); 
     }
+    else if (whichSensorString == "EC") { 
+      Sensor.getCommand();
+      Sensor.ECsendCommand(); 
+    }
+    else if (whichSensorString == "PH") { 
+      Sensor.getCommand();
+      Sensor.PHsendCommand(); 
+    }
+    else if (whichSensorString == "DO") { 
+      Sensor.getCommand();
+      Sensor.DOsendCommand(); 
+    }  
+    Serial.println("Sending command");  
   }
-  Serial.println(commandString);
-}
-/*
-void sendToRTD() {
-  String sendStringRTD = "";
-  sendStringRTD.reserve(30);
-  Serial1.print(commandString);
-  Serial1.print('\r');
-  Serial.print("Response from RTD: ");
-  sendStringRTD = Serial1.readStringUntil(13);
-  Serial.println(sendStringRTD);
-  sendStringRTD = "";
-  sendStringRTD = Serial1.readStringUntil(13);
-  Serial.println(sendStringRTD);
-  Serial.println();
-  sendStringRTD = "";
-  sendStringRTD = Serial1.readStringUntil(13);
-  sendStringRTD = "";
-}
-*/
 
-void sendTOEC() {
-  String sendStringEC = "";
-  sendStringEC.reserve(30);
-
-  Serial2.print(commandString);
-  Serial2.print('\r');
-  Serial.print("Response from EC: ");
-
-  sendStringEC = Serial2.readStringUntil(13);
-  Serial.println(sendStringEC);
-  sendStringEC = "";
-
-  sendStringEC = Serial2.readStringUntil(13);
-  Serial.println(sendStringEC);
-  Serial.println();
-  sendStringEC = "";
-
-  sendStringEC = Serial2.readStringUntil(13);
-  sendStringEC = "";
+//DETERMINE WHICH SENSOR TO SEND A COMMAND TO
+String whichSensor() {
+  whichSensorString = Serial.readStringUntil(13);
+  Serial.print("Connecting to: ");
+  Serial.println(whichSensorString);
+  return whichSensorString;
 }
 
-void sendToPH() {
-  String sendStringPH = "";
-  sendStringPH.reserve(30);
+/*****************************************************************************
+READ FUNCTIONS
+*****************************************************************************/
 
-  Serial3.print(commandString);
-  Serial3.println('\r');
-  Serial.print("Response from PH: ");
-
-  sendStringPH = Serial3.readStringUntil(13);
-  Serial.println(sendStringPH);
-  sendStringPH = "";
-
-  sendStringPH = Serial3.readStringUntil(13);
-  Serial.println(sendStringPH);
-  Serial.println();
-  sendStringPH = "";
-
-  sendStringPH = Serial3.readStringUntil(13);
-  sendStringPH = "";
-}
-
-void sendToDO() {
-  String sendStringDO = "";
-  sendStringDO.reserve(30);
-
-  Serial4.print(commandString);
-  Serial4.print('\r');
-  Serial.print("Response from DO: ");
-
-  sendStringDO = Serial4.readStringUntil(13);
-  Serial.println(sendStringDO);
-  sendStringDO = "";
-
-  sendStringDO = Serial4.readStringUntil(13);
-  Serial.println(sendStringDO);
-  Serial.println();
-  sendStringDO = "";
-
-  sendStringDO = Serial4.readStringUntil(13);
-  sendStringDO = "";
-}
-
-/*************************************************************************************
-*       READING DATA FROM SENSORS
-**************************************************************************************/
+//READ DATA FROM ALL SENSORS
 void readData() {
-
   Serial.println("Reading sensors... ");
-  
-  getConductivity();
-  getPH();
-  getOxygen();
-  //getCarbon();
-  getAirTemp();
-  getHumidity();
-  //getFlowRate();
+  Sensor.readWT();
+  Sensor.readEC();
+  Sensor.readPH();
+  Sensor.readDO();
+  Sensor.readHM();
+  Sensor.readAT();
+  //Sensor.readCB();
+  //Sensor.readFR();
+  Serial.println("Reading Complete.");
+  Serial.println();
 }
 
-/*void getWaterTemp() {
-  String readStringRTD = "";
-  readStringRTD.reserve(30);
-  Serial1.print('R');
-  Serial1.print('\r');
-  readStringRTD = Serial1.readStringUntil(13);
-  waterTemp = readStringRTD.toFloat();
-  waterTemp = waterTemp*1.8 + 32;
-  readStringRTD = "";
-  readStringRTD = Serial1.readStringUntil(13);
-  Serial.print("Reading RTD: ");
-  Serial.print(readStringRTD);
-  Serial.print("\t");
-  readStringRTD = "";
-  Serial.print("Water Temperature: ");
-  Serial.print("\t");
-  Serial.print(waterTemp);
-  Serial.println(" *F");
-}*/
+/******************************************************************************
+PRINT FUNCTIONS
+******************************************************************************/
 
-void getConductivity() {
-  String readStringEC = "";
-  readStringEC.reserve(30);
-
-  Serial2.print('R');
-  Serial2.print('\r');
-
-  readStringEC = Serial2.readStringUntil(13);
-  conductivity = readStringEC.toFloat();
-  readStringEC = "";
-
-  readStringEC = Serial2.readStringUntil(13);
-  Serial.print("Reading EC:  ");
-  Serial.print(readStringEC);
-  Serial.print("\t");
-  readStringEC = "";
-
-  Serial.print("Conductivity: ");
-  Serial.print("\t\t");
-  Serial.print(conductivity);
-  Serial.println(" (micro)S");
-
+//PRINT DATA TO SERIAL MONITORS
+void printToSerial(){
+  Serial.println("Printing data...");
+  Sensor.printWT();
+  Sensor.printEC();
+  Sensor.printPH();
+  Sensor.printDO();
+  Sensor.printHM();
+  Sensor.printAT();
+  //Sensor.printCB();
+  //Sensor.printFR();
+  Serial.println();
 }
 
-void getPH() {
-  String readStringPH = "";
-  readStringPH.reserve(30);
+//PRINT DATA TO INTERNET
+void printToInternet() {}
 
-  Serial3.print('R');
-  Serial3.print('\r');
-
-  readStringPH = Serial3.readStringUntil(13);
-  pH = readStringPH.toFloat();
-  readStringPH = "";
-
-  readStringPH = Serial3.readStringUntil(13);
-  Serial.print("Reading PH:  ");
-  Serial.print(readStringPH);
-  Serial.print("\t");
-  readStringPH = "";
-
-  Serial.print("pH: ");
-  Serial.print("\t\t\t");
-  Serial.print(pH);
-  if (pH >= 7.0) {
-    Serial.println(" (high)");
-  }
-  else if (pH <= 5.000) {
-    Serial.println(" (low)");
-  }
-}
-
-void getOxygen() {
-  String readStringDO = "";
-  readStringDO.reserve(30);
-
-  Serial4.print('R');
-  Serial4.print('\r');
-
-  readStringDO = Serial4.readStringUntil(13);
-  oxygen = readStringDO.toFloat();
-  readStringDO = "";
-
-  readStringDO = Serial4.readStringUntil(13);
-  Serial.print("Reading DO:  ");
-  Serial.print(readStringDO);
-  Serial.print("\t");
-  readStringDO = "";
-
-  Serial.print("Dissolved Oxygen: ");
-  Serial.print("\t");
-  Serial.print(oxygen);
-  Serial.println(" mg/L");
-}
-
-//void getCarbon() {}
-
-void getAirTemp() {
-  airTemp = dht.readTemperature(true);
-  if (isnan(airTemp)) {
-    Serial.println("Failed to read air temperature!");
-  }
-  else {
-    Serial.print("\t\t\t");
-    Serial.print("Air Temperature: ");
-    Serial.print("\t");
-    Serial.print(airTemp);
-    Serial.println(" *F");
-    Serial.println();
-    Serial.println();
-  }
-}
-
-void getHumidity() {
-  humidity = dht.readHumidity();
-  if (isnan(humidity)) {
-    Serial.println("Failed to read humidity!");
-  }
-  else {
-    Serial.print("\t\t\t");
-    Serial.print("Humidity: ");
-    Serial.print("\t\t");
-    Serial.print(humidity);
-    Serial.println(" %");
-  }
-}
-
-//void getFlowRate() {}
-
-/*************************************************************************************
-*   MONITORING AND FIXING THE NUTRIENT SOLUTION
-*   You can change the parameters of your variables here
-**************************************************************************************/
-void monitorSolution() {
-
-  float pH_high = 6.5;
-  float pH_low = 5.5;
-  float conductivity_high = 20000;
-  float conductivity_low = 2000;
-  float oxygen_high = 5000;
-  float oxygen_low = 2000;
-  float wt_high = 80.0;
-  float wt_low = 70.0;
-
-  if (pH < pH_low) { raisePH(); }
-  if (pH > pH_high) { lowerPH(); }
-  if (conductivity < conductivity_low) { raiseConductivity(); }
-  //if (conductivity > conductivity_high) { lowerConductivity(); }    
-  if (oxygen < oxygen_low) { raiseOxygenLevel(); }
-  //if (oxygen > oxygen_high) { lowerOxygenLevel(); }
-  //if (waterTemp < wt_low) { raiseWaterTemp(); }
-  //if (waterTemp > wt_high) { lowerWaterTemp(); }
-}
-
-void raisePH() {
-  digitalWrite(pHup_pin, LOW);
-  digitalWrite(mixPump_pin, LOW);
-  phInterval = millis();
-  currentMillis = millis();
-
-  while (currentMillis - phInterval < pumpInterval) { 
-    currentMillis = millis();
-  }
-
-  digitalWrite(pHup_pin, HIGH);
-  digitalWrite(mixPump_pin, HIGH);
-}
-
-void lowerPH() {
-  digitalWrite(pHdown_pin, LOW);
-  digitalWrite(mixPump_pin, LOW);
-
-  while (phInterval < pumpInterval) {
-    ++phInterval;
-  }
-  digitalWrite(pHdown_pin, HIGH);
-  digitalWrite(mixPump_pin, HIGH);
-  phInterval = 0;
-}
-
-void raiseConductivity() {
-  digitalWrite(fertA_pin, LOW);
-  digitalWrite(fertB_pin, LOW);
-  digitalWrite(mixPump_pin, LOW);
-
-  while (ecInterval < pumpInterval) {
-    ++ecInterval;
-  }
-  digitalWrite(fertA_pin, HIGH);
-  digitalWrite(fertB_pin, HIGH);    
-  digitalWrite(mixPump_pin, HIGH);
-  ecInterval = 0;
-  
-}
-
-//void lowerConductivity() {}
-
-void raiseOxygenLevel() {
-  digitalWrite(stonePump_pin, LOW);
-  digitalWrite(mixPump_pin, LOW);
-
-  while (doInterval < pumpInterval) {
-    ++doInterval;
-  }
-
-  digitalWrite(stonePump_pin, HIGH);
-  digitalWrite(mixPump_pin, HIGH);
-  doInterval = 0;
-}
-
-//void lowerOxygenLevel() {}
-
-//void raiseWaterTemp() {}
-
-//void lowerWaterTemp() {}
-
-/*************************************************************************************
-*     SENDING DATA TO THE INTERNET
-**************************************************************************************/
-void thingSpeak() {}
-/*************************************************************************************
-*     MENU FOR THE LCD DISPLAY
-**************************************************************************************/
-void lcdMenu() {
-  //This function prints all sensor readings to LCD display
+//PRINT DATA TO LCD DISPLAY
+void printToLCD() {
 
   if (lcdPageNumber == 0) {
     printPageNumber0();
@@ -489,11 +190,12 @@ void lcdMenu() {
   }
 }
 
+//PRINT FIRST PAGE TO LCD
 void printPageNumber0() {
   lcd.clear();
   lcd.setCursor(0, 0);
-  int wtemp = waterTemp;
-  int atemp = airTemp;
+  int wtemp = Sensor.getWaterTemp();
+  int atemp = Sensor.getAirTemp();
   lcd.print("H20 ");
   lcd.print(wtemp);
   lcd.print("F ");
@@ -502,24 +204,142 @@ void printPageNumber0() {
   lcd.print("F");
   lcd.setCursor(0, 1);
   lcd.print("PH ");
-  lcd.print(pH);
+  lcd.print(Sensor.getPH());
   lcd.print(" ");
   lcd.print("EC ");
-  lcd.print(conductivity);
+  lcd.print(Sensor.getConductivity());
   lcd.print("");
 }
 
+//PRINT SECOND PAGE TO LCD
 void printPageNumber1() {
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("HUMIDITY ");
-  lcd.print(humidity);
+  lcd.print(Sensor.getHumidity());
   lcd.print(" ");
   lcd.setCursor(0, 1);
   lcd.print("DO ");
-  lcd.print(oxygen);
+  lcd.print(Sensor.getOxygen());
   lcd.print(" ");
   lcd.print("CO2 ");
-  lcd.print("N/A");
+  lcd.print(Sensor.getCarbon());
   lcd.print("");
 }
+
+/***********************************************************************************
+MONITOR FUNCTIONS
+***********************************************************************************/
+
+//MONITOR PARAMETERS OF SOLUTION
+void monitorSolution() {
+
+  //**VARIABLE PARAMETERS CAN BE CHANGED HERE**//
+  float WT_high = 80.0;
+  float WT_low = 70.0;
+  float EC_high = 20000;
+  float EC_low = 2000;
+  float PH_high = 6.5;
+  float PH_low = 5.5;
+  float DO_high = 5000;
+  float DO_low = 2000;  
+  float HM_high = 80.0;
+  float HM_low = 40.0;
+  float AT_high = 80.0;
+  float AT_low = 50.0;
+  
+  //if (Sensor.getWaterTemp() < WT_low) { raiseWaterTemp(); }
+  //if (Sensor.getWaterTemp() > WT_high) { lowerWaterTemp(); }
+  if (Sensor.getConductivity() < EC_low) { raiseConductivity(); }
+  //if (Sensor.getConductivity() > EC_high) { lowerConductivity(); }  
+  if (Sensor.getPH() < PH_low) { raisePH(); }
+  if (Sensor.getPH() > PH_high) { lowerPH(); }  
+  if (Sensor.getOxygen() < DO_low) { raiseOxygenLevel(); }
+  //if (Sensor.getOxygen() > DO_high) { lowerOxygenLevel(); }
+  //if (Sensor.getHumidity() < HM_low) { raiseOxygenLevel(); }
+  //if (Sensor.getHumidity() > HM_high) { lowerOxygenLevel(); }
+  //if (Sensor.getWaterTemp() < WT_low) { raiseWaterTemp(); }
+  //if (Sensor.getWaterTemp() > WT_high) { lowerWaterTemp(); }
+}
+
+// RAISE WATER TEMPERATURE OF THE NUTRIENT SOLUTION
+// void raiseWaterTemp() {}
+
+// LOWER WATER TEMPERATURE OF THE NUTRIENT SOLUTION
+// void lowerWaterTemp() {}
+
+//RAISE CONDUCTIVITY OF THE NUTRIENT SOLUTION
+void raiseConductivity() {
+  digitalWrite(fertA_pin, LOW);
+  digitalWrite(fertB_pin, LOW);
+  digitalWrite(mixPump_pin, LOW);
+  long ecInterval = 0;
+  
+  while (ecInterval < pumpInterval) {
+    ++ecInterval;
+  }
+  digitalWrite(fertA_pin, HIGH);
+  digitalWrite(fertB_pin, HIGH);    
+  digitalWrite(mixPump_pin, HIGH);
+}
+
+//LOWER CONDUCTIVITY OF THE NUTRIENT SOLUTION
+// void lowerConductivity() {}
+
+//RAISE PH OF THE NUTRIENT SOLUTION
+  void raisePH() {
+  digitalWrite(pHup_pin, LOW);
+  digitalWrite(mixPump_pin, LOW);
+  long phInterval = millis();
+  currentMillis = millis();
+
+  while (currentMillis - phInterval < pumpInterval) { 
+    currentMillis = millis();
+  }
+
+  digitalWrite(pHup_pin, HIGH);
+  digitalWrite(mixPump_pin, HIGH);
+  }
+
+//LOWER PH OF THE NUTRIENT SOLUTION
+  void lowerPH() {
+  digitalWrite(pHdown_pin, LOW);
+  digitalWrite(mixPump_pin, LOW);
+  long phInterval = 0;
+  
+  while (phInterval < pumpInterval) {
+    ++phInterval;
+  }
+  digitalWrite(pHdown_pin, HIGH);
+  digitalWrite(mixPump_pin, HIGH);
+  }
+
+//RAISE OXYGEN LEVEL OF THE NUTRIENT SOLUTION
+void raiseOxygenLevel() {
+  digitalWrite(stonePump_pin, LOW);
+  digitalWrite(mixPump_pin, LOW);
+  int doInterval = 0;
+  while (doInterval < pumpInterval) {
+    ++doInterval;
+  }
+
+  digitalWrite(stonePump_pin, HIGH);
+  digitalWrite(mixPump_pin, HIGH);
+}
+
+// LOWER OXYGEN LEVEL OF THE NUTRIENT SOLUTION
+// void lowerOxygenLevel() {}
+
+// RAISE HUMIDITY OF THE ENVIRONMENT
+// LOWER HUMIDITY OF THE ENVIRONMENT
+
+// RAISE AIR TEMPERATURE OF THE ENVIRONMENT
+// LOWER AIR TEMPERATURE OF THE ENIVRONMENT
+
+// RAISE CARBON DIOXIDE LEVEL OF THE ENVIRONMENT
+// LOWER CARBON DIOXIDE LEVEL OF THE ENVIRONMENT
+
+// RAISE FLOW RATE OF THE NUTRIENT SOLUTION
+// LOWER FLOW RATE OF THE NUTRIENT SOLUTION
+
+
