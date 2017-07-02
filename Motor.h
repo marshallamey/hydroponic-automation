@@ -136,6 +136,10 @@ MEMBER FUNCTIONS
 // RAISE FLOW RATE OF THE NUTRIENT SOLUTION
 // LOWER FLOW RATE OF THE NUTRIENT SOLUTION
 
+/***************************************************************************************************
+ACCESSOR FUNCTIONS
+******************/
+  
 int getFertA_pin(){
   return fertA_pin; 
 }
@@ -150,6 +154,18 @@ int getPHup_pin(){
 
 int getPHdown_pin(){
   return pHdown_pin; 
+}
+  
+int getAirPump_pin(){
+  return airPump_pin; 
+}
+  
+int getStonePump_pin(){
+  return stonePump_pin; 
+}
+  
+int getWaterPump_pin(){
+  return waterPump_pin; 
 }
 
 };
