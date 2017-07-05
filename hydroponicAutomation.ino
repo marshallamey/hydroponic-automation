@@ -11,34 +11,45 @@ Make sure to use Carriage Return only
 Baud rate is 9600 bps
 */
 
-#include <SoftwareSerial.h>           
+//LIBRARIES
+#include <SoftwareSerial.h>  
+#include <SPI.h>
+#include <WiFi101.h>         
 #include <Adafruit_RGBLCDShield.h>
+#include "ThingSpeak.h"
 #include "Sensor.h"
 #include "Motor.h"
 #include "DHT.h"  
 
 String whichSensorString = "";
-int lcdPageNumber = 0;
+
+// TIMING VARIABLES
 long readDataInterval = 20000;
-long menuScrollTime = 5000;
 unsigned long currentMillis;
 unsigned long previousMillis01 = 0;
 unsigned long previousMillis02 = 0;
-int idleTime = 10000;
 
-//FOR LCD DISPLAY MENU 
-//States for the menu.
+//WIFI VARIABLES  
+char ssid[] = "CoC Student Center";    //  your network SSID (name) 
+char pass[] = "sanantonio210";   // your network password
+int status = WL_IDLE_STATUS;
+unsigned long myChannelNumber = 298095;
+const char * myWriteAPIKey = "F8Q6F3XFDI3QDLUY";
+
+//LCD MENU VARIABLES
 int currentMenuItem = 0;
-int lastState = 0;
-unsigned long lastInput = 0;                         // last button press
-enum operatingState {HOME, MENU, RIGHT, SENSORS, MOTORS, NUTRIENT_A, NUTRIENT_B, PH_UP, PH_DOWN};
-operatingState opState = HOME;                      //HOMEines states                        
-
+//int lastState = 0;
+unsigned long lastButtonPress = 0;
+int lcdPageNumber = 0;
+int lcdIdleTime = 10 * 1000;
+long menuScrollTime = 5 * 1000;
+enum operatingState {HOME, MENU, RIGHT, SENSORS, MOTORS, NUTRIENT_A, NUTRIENT_B, PH_UP, PH_DOWN};                      
 
 SENSOR Sensor;
 MOTOR Motor;
-
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
+operatingState opState = HOME;
+WiFiClient  client;
 
 /*************************************************************************************
 SETUP AND LOOP FUNCTIONS
@@ -52,6 +63,8 @@ void setup() {
   Serial4.begin(9600);
   
   Motor.initializePins();
+  WiFi.begin(ssid, pass);
+  ThingSpeak.begin(client);
   
   Serial.println("Initializing data collection...");
   Serial.println();
@@ -74,87 +87,76 @@ void loop() {
     previousMillis01 = currentMillis; 
     readData();
     printToSerial();
-    //printToInternet();
+    printToInternet();
     //monitorSolution();
   } 
 }
 
-/******************************************************************************************
-SEND FUNCTIONS
-******************************************************************************************/
 
-// SEND A COMMAND TO AN ATLAS SCIENTIFIC SENSOR
-void sendSensorCommand() {
-    whichSensor();
-    if (whichSensorString == "WT") { 
-      Sensor.getCommand(); 
-      Sensor.WTsendCommand(); 
-    }
-    else if (whichSensorString == "EC") { 
-      Sensor.getCommand();
-      Sensor.ECsendCommand(); 
-    }
-    else if (whichSensorString == "PH") { 
-      Sensor.getCommand();
-      Sensor.PHsendCommand(); 
-    }
-    else if (whichSensorString == "DO") { 
-      Sensor.getCommand();
-      Sensor.DOsendCommand(); 
-    }  
+//SEND A COMMAND TO AN ATLAS SCIENTIFIC SENSOR
+  void sendSensorCommand() {
+    whichSensorString = Serial.readStringUntil(13);
+    Serial.print("Connecting to: ");
+    Serial.println(whichSensorString);
+    Sensor.getCommand();
+    
+    if (whichSensorString == "WT") { Sensor.WTsendCommand(); }
+    else if (whichSensorString == "EC") { Sensor.ECsendCommand(); }
+    else if (whichSensorString == "PH") { Sensor.PHsendCommand(); }
+    else if (whichSensorString == "DO") { Sensor.DOsendCommand(); }  
+    
     Serial.println("Sending command");  
   }
 
-//DETERMINE WHICH SENSOR TO SEND A COMMAND TO
-String whichSensor() {
-  whichSensorString = Serial.readStringUntil(13);
-  Serial.print("Connecting to: ");
-  Serial.println(whichSensorString);
-  return whichSensorString;
-}
-
-/*****************************************************************************
-READ FUNCTIONS
-*****************************************************************************/
 
 //READ DATA FROM ALL SENSORS
-void readData() {
-  Serial.println("Reading sensors... ");
-  Sensor.readWT();
-  Sensor.readEC();
-  Sensor.readPH();
-  Sensor.readDO();
-  Sensor.readHM();
-  Sensor.readAT();
-  //Sensor.readCB();
-  //Sensor.readFR();
-  Serial.println("Reading Complete.");
-  Serial.println();
-}
+  void readData() {
+    Serial.println("Reading sensors... ");
+    Sensor.readWT();
+    Sensor.readEC();
+    Sensor.readPH();
+    Sensor.readDO();
+    Sensor.readHM();
+    Sensor.readAT();
+    //Sensor.readCB();
+    //Sensor.readFR();
+    Serial.println("Reading Complete.");
+    Serial.println();
+  }
 
 /******************************************************************************
 PRINT FUNCTIONS
 ******************************************************************************/
 
 //PRINT DATA TO SERIAL MONITORS
-void printToSerial(){
-  Serial.println("Printing data...");
-  Sensor.printWT();
-  Sensor.printEC();
-  Sensor.printPH();
-  Sensor.printDO();
-  Sensor.printHM();
-  Sensor.printAT();
-  //Sensor.printCB();
-  //Sensor.printFR();
-  Serial.println();
-}
+  void printToSerial(){
+    Serial.println("Printing data...");
+    Sensor.printWT();
+    Sensor.printEC();
+    Sensor.printPH();
+    Sensor.printDO();
+    Sensor.printHM();
+    Sensor.printAT();
+    //Sensor.printCB();
+    //Sensor.printFR();
+    Serial.println();
+  }
 
 //PRINT DATA TO INTERNET
-void printToInternet() {}
+  void printToInternet() {
+    ThingSpeak.setField(1,Sensor.getWaterTemp());
+    ThingSpeak.setField(2,Sensor.getConductivity());
+    ThingSpeak.setField(3,Sensor.getPH());
+    ThingSpeak.setField(4,Sensor.getOxygen());
+    ThingSpeak.setField(5,Sensor.getAirTemp());
+    ThingSpeak.setField(6,Sensor.getHumidity());
+    ThingSpeak.setField(7,Sensor.getCarbon());
+    ThingSpeak.setField(8,Sensor.getFlowRate());
+    ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
+    }
 
 //PRINT DATA TO LCD DISPLAY
-void printToLCD() {
+  void printToLCD() {
     if (lcdPageNumber == 0) {
       printPageNumber0();
       lcdPageNumber = 1;
@@ -163,49 +165,44 @@ void printToLCD() {
       printPageNumber1();
       lcdPageNumber = 0;
     }
-
-}
+  }
 
 //PRINT FIRST PAGE TO LCD
-void printPageNumber0() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  int wtemp = Sensor.getWaterTemp();
-  int atemp = Sensor.getAirTemp();
-  lcd.print("H20 ");
-  lcd.print(wtemp);
-  lcd.print("F ");
-  lcd.print("AIR ");
-  lcd.print(atemp);
-  lcd.print("F");
-  lcd.setCursor(0, 1);
-  lcd.print("PH ");
-  lcd.print(Sensor.getPH());
-  lcd.print(" ");
-  lcd.print("EC ");
-  lcd.print(Sensor.getConductivity());
-  lcd.print("");
-}
+  void printPageNumber0() {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    int wtemp = Sensor.getWaterTemp();
+    int atemp = Sensor.getAirTemp();
+    lcd.print("H20 ");
+    lcd.print(wtemp);
+    lcd.print("F ");
+    lcd.print("AIR ");
+    lcd.print(atemp);
+    lcd.print("F");
+    lcd.setCursor(0, 1);
+    lcd.print("PH ");
+    lcd.print(Sensor.getPH());
+    lcd.print(" ");
+    lcd.print("EC ");
+    lcd.print(Sensor.getConductivity());
+    lcd.print("");
+  }
 
 //PRINT SECOND PAGE TO LCD
-void printPageNumber1() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("HUMIDITY ");
-  lcd.print(Sensor.getHumidity());
-  lcd.print(" ");
-  lcd.setCursor(0, 1);
-  lcd.print("DO ");
-  lcd.print(Sensor.getOxygen());
-  lcd.print(" ");
-  lcd.print("CO2 ");
-  lcd.print(Sensor.getCarbon());
-  lcd.print("");
-}
-
-/***********************************************************************************
-MONITOR FUNCTION
-***********************************************************************************/
+  void printPageNumber1() {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("HUMIDITY ");
+    lcd.print(Sensor.getHumidity());
+    lcd.print(" ");
+    lcd.setCursor(0, 1);
+    lcd.print("DO ");
+    lcd.print(Sensor.getOxygen());
+    lcd.print(" ");
+    lcd.print("CO2 ");
+    lcd.print(Sensor.getCarbon());
+    lcd.print("");
+  }
 
 //MONITOR PARAMETERS OF SOLUTION
 void monitorSolution() {
@@ -213,12 +210,12 @@ void monitorSolution() {
   //**VARIABLE PARAMETERS CAN BE CHANGED HERE**//
   float WT_high = 80.0;
   float WT_low = 70.0;
-  float EC_high = 20000;
-  float EC_low = 2000;
-  float PH_high = 6.5;
-  float PH_low = 5.5;
-  float DO_high = 5000;
-  float DO_low = 2000;  
+  float EC_high = 2200;
+  float EC_low = 1800;
+  float PH_high = 6.6;
+  float PH_low = 5.8;
+  float DO_high = 30;
+  float DO_low = 12;  
   float HM_high = 80.0;
   float HM_low = 40.0;
   float AT_high = 80.0;
@@ -234,7 +231,7 @@ void monitorSolution() {
   //if (Sensor.getConductivity() > EC_high) { Motor.lowerConductivity(); }  
   if (Sensor.getPH() < PH_low) { Motor.raisePH(); }
   if (Sensor.getPH() > PH_high) { Motor.lowerPH(); }  
-  if (Sensor.getOxygen() < DO_low) { Motor.raiseOxygenLevel(); }
+  //if (Sensor.getOxygen() < DO_low) { Motor.raiseOxygenLevel(); }
   //if (Sensor.getOxygen() > DO_high) { Motor.lowerOxygenLevel(); }
   //if (Sensor.getHumidity() < HM_low) { Motor.raiseOxygenLevel(); }
   //if (Sensor.getHumidity() > HM_high) { Motor.lowerOxygenLevel(); }
@@ -287,7 +284,7 @@ MENU FUNCTIONS
   uint8_t ReadButtons(){
     uint8_t buttons = lcd.readButtons();
     if (buttons != 0){
-      lastInput = millis();
+      lastButtonPress = millis();
     }
     return buttons;
   }  
@@ -376,7 +373,7 @@ MENU FUNCTIONS
       }
       
       //RETURN TO HOME SCREEN IF IDLE 
-      if ((millis() - lastInput) > idleTime){
+      if ((millis() - lastButtonPress) > lcdIdleTime){
         lcd.clear();
         opState = HOME; 
         currentMenuItem = 0;
@@ -476,7 +473,7 @@ MENU FUNCTIONS
       }
       
       //RETURN TO HOME SCREEN IF IDLE 
-      if ((millis() - lastInput) > idleTime){
+      if ((millis() - lastButtonPress) > lcdIdleTime){
         lcd.clear();
         opState = HOME; 
         currentMenuItem = 0;
@@ -569,7 +566,7 @@ MENU FUNCTIONS
       }
       
       //RETURN TO HOME SCREEN IF IDLE 
-      if ((millis() - lastInput) > idleTime){
+      if ((millis() - lastButtonPress) > lcdIdleTime){
         lcd.clear();
         opState = HOME; 
         currentMenuItem = 0;
@@ -596,7 +593,8 @@ MENU FUNCTIONS
       }    
       if (buttons & BUTTON_RIGHT){
         digitalWrite(Motor.getFertA_pin(), LOW);
-        while (buttons & BUTTON_RIGHT != 0){}  
+        //while (buttons & BUTTON_RIGHT != 0){} 
+        delay(5000); 
         digitalWrite(Motor.getFertA_pin(), HIGH);
         return;
       }
@@ -607,7 +605,7 @@ MENU FUNCTIONS
       }
              
       //RETURN TO HOME SCREEN IF IDLE 
-      if ((millis() - lastInput) > idleTime){
+      if ((millis() - lastButtonPress) > lcdIdleTime){
         lcd.clear();
         opState = HOME; 
         currentMenuItem = 0;
@@ -634,7 +632,9 @@ MENU FUNCTIONS
       }    
       if (buttons & BUTTON_RIGHT){
         digitalWrite(Motor.getFertB_pin(), LOW);
-        while (buttons & BUTTON_RIGHT != 0){}  
+        //while (buttons & BUTTON_RIGHT != 0){  
+        //} 
+        delay(5000); 
         digitalWrite(Motor.getFertB_pin(), HIGH);
         return;
       }
@@ -645,7 +645,7 @@ MENU FUNCTIONS
       }
     
       //RETURN TO HOME SCREEN IF IDLE 
-      if ((millis() - lastInput) > idleTime){
+      if ((millis() - lastButtonPress) > lcdIdleTime){
         lcd.clear();
         opState = HOME; 
         currentMenuItem = 0;
@@ -672,7 +672,8 @@ MENU FUNCTIONS
       }    
       if (buttons & BUTTON_RIGHT){
         digitalWrite(Motor.getPHup_pin(), LOW); 
-        while (buttons & BUTTON_RIGHT != 0){}  
+        //while (buttons & BUTTON_RIGHT != 0){}  
+        delay(5000);
         digitalWrite(Motor.getPHup_pin(), HIGH);
         return;
       }
@@ -683,7 +684,7 @@ MENU FUNCTIONS
       }
 
       //RETURN TO HOME SCREEN IF IDLE 
-      if ((millis() - lastInput) > idleTime){
+      if ((millis() - lastButtonPress) > lcdIdleTime){
         lcd.clear();
         opState = HOME; 
         currentMenuItem = 0;
@@ -710,7 +711,8 @@ MENU FUNCTIONS
       }    
       if (buttons & BUTTON_RIGHT){
         digitalWrite(Motor.getPHdown_pin(), LOW);
-        while (buttons & BUTTON_RIGHT != 0){}  
+        //while (buttons & BUTTON_RIGHT != 0){} 
+        delay(5000);
         digitalWrite(Motor.getPHdown_pin(), HIGH);
         return;
       }
@@ -721,7 +723,7 @@ MENU FUNCTIONS
       }
   
       //RETURN TO HOME SCREEN IF IDLE 
-      if ((millis() - lastInput) > idleTime){
+      if ((millis() - lastButtonPress) > lcdIdleTime){
         lcd.clear();
         opState = HOME; 
         currentMenuItem = 0;
