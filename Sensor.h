@@ -5,7 +5,7 @@
 #include "DHT.h"
 
 // Establish Serial Port 4
-SoftwareSerial Serial4 (11, 10);
+SoftwareSerial Serial4 (3,2);
 
 // DHT Temperature and Humidity Sensor
 #define DHTPIN 4        
@@ -13,7 +13,7 @@ SoftwareSerial Serial4 (11, 10);
 DHT dht(DHTPIN, DHTTYPE);
 
 
-class Sensor {
+class SENSOR {
   private:
 
     String commandString;
@@ -29,12 +29,11 @@ class Sensor {
   public:
 
 //CONSTRUCTOR
-    Sensor(){}
+    SENSOR(){}
 
-//MEMBER FUNCTIONS
 /************************************************************************************************
-COMMAND FUNCTION    
-*****************/
+MEMBER FUNCTIONS    
+************************************************************************************************/
 
 //GET A COMMAND FROM THE USER
     String getCommand() {
@@ -256,13 +255,7 @@ PRINT FUNCTIONS
     void printPH() {
       Serial.print("pH: ");
       Serial.print("\t\t\t");
-      Serial.print(pH);
-      if (pH >= 7.0) {
-        Serial.println(" (high)");
-      }
-      else if (pH <= 5.000) {
-        Serial.println(" (low)");
-      }
+      Serial.println(pH);
     }
 
 //PRINT DO DATA TO SERIAL MONITOR
