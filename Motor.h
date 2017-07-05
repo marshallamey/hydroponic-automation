@@ -9,16 +9,17 @@ class MOTOR {
   private:
 
 // MOTOR PIN LOCATIONS
-    int pHup_pin = 30;
-    int pHdown_pin = 31;
-    int fertA_pin = 32;
+    int lights_pin = 30;
+    int stonePump_pin = 31;
+    int waterPump_pin = 32;
     int fertB_pin = 33;
-    int mixPump_pin = 34;
-    int stonePump_pin = 35;
-    int water_pin = 36;  
+    int fertA_pin = 34;
+    int pHdown_pin = 35;
+    int pHup_pin = 36;
+    int waterValve_pin = 37;  
 
 //TIMING VARIABLES
-    long pumpRunTime = 5000;
+    long pumpRunTime = 2000;
     unsigned long currentMillis;
     unsigned long previousMillis;
 
@@ -37,17 +38,19 @@ MEMBER FUNCTIONS
       pinMode(pHdown_pin, OUTPUT);
       pinMode(fertA_pin, OUTPUT);
       pinMode(fertB_pin, OUTPUT);
-      pinMode(mixPump_pin, OUTPUT);
+      pinMode(waterValve_pin, OUTPUT);
       pinMode(stonePump_pin, OUTPUT);
-      pinMode(water_pin, OUTPUT);
+      pinMode(waterPump_pin, OUTPUT);
+      pinMode(lights_pin, OUTPUT);
     
       digitalWrite(pHup_pin, HIGH);
       digitalWrite(pHdown_pin, HIGH);
       digitalWrite(fertA_pin, HIGH);
       digitalWrite(fertB_pin, HIGH);
-      digitalWrite(mixPump_pin, HIGH);
-      digitalWrite(stonePump_pin, HIGH);
-      digitalWrite(water_pin, HIGH);
+      digitalWrite(waterValve_pin, HIGH);
+      digitalWrite(stonePump_pin, LOW);
+      digitalWrite(waterPump_pin, LOW);
+      digitalWrite(lights_pin, LOW);
     }
 
 //RAISE WATER TEMPERATURE OF THE NUTRIENT SOLUTION
@@ -58,10 +61,7 @@ MEMBER FUNCTIONS
 
 //RAISE CONDUCTIVITY OF THE NUTRIENT SOLUTION
     void raiseConductivity() {
-      digitalWrite(fertA_pin, LOW);
-      digitalWrite(fertB_pin, LOW);
-      digitalWrite(mixPump_pin, LOW);
-
+      digitalWrite(fertA_pin, LOW);     
       currentMillis = millis();
       previousMillis = millis();
       
@@ -69,8 +69,14 @@ MEMBER FUNCTIONS
         currentMillis = millis();
       }
       digitalWrite(fertA_pin, HIGH);
+      digitalWrite(fertB_pin, LOW);
+      currentMillis = millis();
+      previousMillis = millis();
+      
+      while (currentMillis - previousMillis < pumpRunTime) {
+        currentMillis = millis();
+      }   
       digitalWrite(fertB_pin, HIGH);    
-      digitalWrite(mixPump_pin, HIGH);
     }
 
 //LOWER CONDUCTIVITY OF THE NUTRIENT SOLUTION
@@ -79,7 +85,7 @@ MEMBER FUNCTIONS
 //RAISE PH OF THE NUTRIENT SOLUTION
     void raisePH() {
       digitalWrite(pHup_pin, LOW);
-      digitalWrite(mixPump_pin, LOW);
+      digitalWrite(stonePump_pin, LOW);
       
       currentMillis = millis();
       previousMillis = millis();
@@ -88,13 +94,13 @@ MEMBER FUNCTIONS
       }
     
       digitalWrite(pHup_pin, HIGH);
-      digitalWrite(mixPump_pin, HIGH);
+      digitalWrite(stonePump_pin, LOW);
     }
 
 //LOWER PH OF THE NUTRIENT SOLUTION
     void lowerPH() {
       digitalWrite(pHdown_pin, LOW);
-      digitalWrite(mixPump_pin, LOW);
+      digitalWrite(stonePump_pin, LOW);
       
       currentMillis = millis();
       previousMillis = millis();
@@ -103,13 +109,12 @@ MEMBER FUNCTIONS
       }
       
       digitalWrite(pHdown_pin, HIGH);
-      digitalWrite(mixPump_pin, HIGH);
+      digitalWrite(stonePump_pin, LOW);
     }
 
 //RAISE OXYGEN LEVEL OF THE NUTRIENT SOLUTION
     void raiseOxygenLevel() {
       digitalWrite(stonePump_pin, LOW);
-      digitalWrite(mixPump_pin, LOW);
       
       currentMillis = millis();
       previousMillis = millis();
@@ -117,8 +122,7 @@ MEMBER FUNCTIONS
         currentMillis = millis();
       }
     
-      digitalWrite(stonePump_pin, HIGH);
-      digitalWrite(mixPump_pin, HIGH);
+      digitalWrite(stonePump_pin, LOW);
     }
 
 // LOWER OXYGEN LEVEL OF THE NUTRIENT SOLUTION
@@ -136,10 +140,6 @@ MEMBER FUNCTIONS
 // RAISE FLOW RATE OF THE NUTRIENT SOLUTION
 // LOWER FLOW RATE OF THE NUTRIENT SOLUTION
 
-/***************************************************************************************************
-ACCESSOR FUNCTIONS
-******************/
-  
 int getFertA_pin(){
   return fertA_pin; 
 }
@@ -155,17 +155,21 @@ int getPHup_pin(){
 int getPHdown_pin(){
   return pHdown_pin; 
 }
-  
-int getAirPump_pin(){
-  return airPump_pin; 
+
+int getlights_pin(){
+  return lights_pin;
 }
-  
-int getStonePump_pin(){
-  return stonePump_pin; 
+    
+int getstonePump_pin(){
+  return stonePump_pin;
 }
-  
+    
 int getWaterPump_pin(){
-  return waterPump_pin; 
+  return waterPump_pin;
+}
+
+int getWaterValve_pin(){
+  return waterValve_pin;
 }
 
 };
