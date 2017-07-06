@@ -63,7 +63,18 @@ void setup() {
   Serial4.begin(9600);
   
   Motor.initializePins();
-  WiFi.begin(ssid, pass);
+  //CONNECT TO WIFI
+  while (status != WL_CONNECTED) {
+    Serial.print("Attempting to connect to Wifi Network: ");
+    Serial.println(ssid);
+    status = WiFi.begin(ssid, pass);
+  // WAIT FOR CONNECTION
+    delay(10000);
+  }
+
+  Serial.print("You're connected to the network");
+  printCurrentNet();
+  printWifiData();
   ThingSpeak.begin(client);
   
   Serial.println("Initializing data collection...");
@@ -92,6 +103,19 @@ void loop() {
   } 
 }
 
+// print the SSID of the network you're attached to:
+  void printCurrentNet() {
+    Serial.print("SSID: ");
+    Serial.println(WiFi.SSID());
+  }
+
+// print your WiFi shield's IP address:
+  void printWifiData() {  
+    IPAddress ip = WiFi.localIP();
+    Serial.print("IP Address: ");
+    Serial.println(ip);
+    Serial.println(ip);
+  }
 
 //SEND A COMMAND TO AN ATLAS SCIENTIFIC SENSOR
   void sendSensorCommand() {
