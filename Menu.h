@@ -22,13 +22,13 @@ unsigned long lastButtonPress = 0;
 int lcdPageNumber = 0;
 int lcdIdleTime = 10 * 1000;
 long menuScrollTime = 5 * 1000;
-enum operatingState {HOME, MAINMENU, RIGHT, SENSORS, MOTORS, NUTRIENT_A, NUTRIENT_B, PH_UP, PH_DOWN}; 
+enum operatingState {A, B, C, D, E, F, G, H}; 
 
 
   public:
   SENSOR Sensor;
   MOTOR Motor;
-  operatingState opState = HOME;
+  operatingState opState = A;
   Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 
   //CONSTRUCTOR
@@ -45,28 +45,28 @@ MEMBER FUNCTIONS
     while(ReadButtons() != 0) {}
     
     switch (opState){
-    case HOME:
+    case A:
       HomeScreen();
       break;
-    case MAINMENU:
+    case B:
       MainMenu();
       break;
-    case SENSORS:
+    case C:
       Sensors();
       break;
-    case MOTORS:
+    case D:
       Motors();
       break;   
-    case NUTRIENT_A:
+    case E:
       NutrientA();
       break;
-    case NUTRIENT_B:
+    case F:
       NutrientB();
       break;
-    case PH_UP:
+    case G:
       phUP();
       break;
-    case PH_DOWN:
+    case H:
       phDOWN();
       break;   
     }
@@ -87,7 +87,7 @@ MEMBER FUNCTIONS
     //while(true){
       buttons = ReadButtons();
       if (buttons !=0 ){
-        opState = MAINMENU;
+        opState = B;
         return;   
       }
       else{
@@ -162,17 +162,17 @@ MEMBER FUNCTIONS
         downButton();
         
         if (buttons & BUTTON_LEFT){
-           opState = HOME;
+           opState = A;
            return;
         }    
         if (buttons & BUTTON_RIGHT){
           if(currentMenuItem == 0){
-            opState = SENSORS;
+            opState = C;
             currentMenuItem = 0;
             return;
           }
           if(currentMenuItem == 1){
-            opState = MOTORS;
+            opState = D;
             currentMenuItem = 0;
             return;
           }
@@ -213,14 +213,11 @@ MEMBER FUNCTIONS
       downButton();
       
       if (buttons & BUTTON_RIGHT){
-         opState = HOME;
+         opState = A;
          currentMenuItem = 0;
          return;
       }
-      if (buttons & BUTTON_LEFT){
-         opState = MAINMENU;
-         return;
-      }
+      leftButton(B);
       selectButton();
   
     //SCROLL THROUGH MENU ITEMS
@@ -293,30 +290,27 @@ MEMBER FUNCTIONS
       
       if (buttons & BUTTON_RIGHT){
         if(currentMenuItem == 0){
-          opState = NUTRIENT_A;
+          opState = E;
           currentMenuItem = 0;
           return;
         }
         if(currentMenuItem == 1){
-          opState = NUTRIENT_B;
+          opState = F;
           currentMenuItem = 0;
           return;
         }
         if(currentMenuItem == 2){
-            opState = PH_UP;
+            opState = G;
             currentMenuItem = 0;
             return;
           }
         if(currentMenuItem == 3){
-          opState = PH_DOWN;
+          opState = H;
           currentMenuItem = 0;
           return;
         }
       }
-      if (buttons & BUTTON_LEFT){
-         opState = MAINMENU;
-         return;
-      }
+      leftButton(B);
       selectButton();
   
     //SCROLL THROUGH MENU ITEMS
@@ -362,10 +356,7 @@ MEMBER FUNCTIONS
       
       //BUTTON ASSIGNMENT
       buttons = ReadButtons();
-      if (buttons & BUTTON_LEFT){
-        opState = MOTORS;
-        return;
-      }    
+      leftButton(D);    
       if (buttons & BUTTON_RIGHT){
         digitalWrite(Motor.getFertA_pin(), LOW);
         //while (buttons & BUTTON_RIGHT != 0){} 
@@ -390,10 +381,7 @@ MEMBER FUNCTIONS
       
       //BUTTON ASSIGNMENT
       buttons = ReadButtons();
-      if (buttons & BUTTON_LEFT){
-        opState = MOTORS;
-        return;
-      }    
+      leftButton(D);   
       if (buttons & BUTTON_RIGHT){
         digitalWrite(Motor.getFertB_pin(), LOW);
         //while (buttons & BUTTON_RIGHT != 0){  
@@ -419,10 +407,7 @@ MEMBER FUNCTIONS
       
       //BUTTON ASSIGNMENT
       buttons = ReadButtons();
-      if (buttons & BUTTON_LEFT){
-        opState = MOTORS;
-        return;
-      }    
+      leftButton(D);   
       if (buttons & BUTTON_RIGHT){
         digitalWrite(Motor.getPHup_pin(), LOW); 
         //while (buttons & BUTTON_RIGHT != 0){}  
@@ -448,10 +433,7 @@ MEMBER FUNCTIONS
       
       //BUTTON ASSIGNMENT
       buttons = ReadButtons();
-      if (buttons & BUTTON_LEFT){
-        opState = MOTORS;
-        return;
-      }    
+      leftButton(D);  
       if (buttons & BUTTON_RIGHT){
         digitalWrite(Motor.getPHdown_pin(), LOW);
         //while (buttons & BUTTON_RIGHT != 0){} 
@@ -468,7 +450,7 @@ MEMBER FUNCTIONS
 void ifIdleReturnHome(){
   if ((millis() - lastButtonPress) > lcdIdleTime){
     lcd.clear();
-    opState = HOME; 
+    opState = A; 
     currentMenuItem = 0;
     return;
   }
@@ -497,9 +479,15 @@ void downButton(){
   }
 }
 
+void leftButton(char x){       
+   if (ReadButtons() & BUTTON_LEFT){
+       opState = x;
+       return;
+   }    
+}
 void selectButton(){
   if (ReadButtons() & BUTTON_SELECT) {
-    opState = HOME;
+    opState = A;
     currentMenuItem = 0;
     return;  
   }
