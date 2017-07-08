@@ -12,6 +12,7 @@ Baud rate is 9600 bps
 */
 
 //LIBRARIES
+//#include <ArduinoUnit.h>
 #include <SoftwareSerial.h>  
 #include <SPI.h>
 #include <WiFi101.h>         
@@ -21,10 +22,8 @@ Baud rate is 9600 bps
 #include "Motor.h"
 #include "DHT.h"  
 
-String whichSensorString = "";
-
 // TIMING VARIABLES
-long readDataInterval = 20000;
+long readDataInterval = 30000;
 unsigned long currentMillis;
 unsigned long previousMillis01 = 0;
 unsigned long previousMillis02 = 0;
@@ -56,51 +55,62 @@ SETUP AND LOOP FUNCTIONS
 *************************************************************************************/
 
 void setup() {
+  lcd.begin(16,2);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("   HYDROPONIC   ");
+  lcd.setCursor(0,1);
+  lcd.print("   SYSTEM  ON   ");
   Serial.begin(9600);
   Serial1.begin(9600);
   Serial2.begin(9600);
   Serial3.begin(9600);
   Serial4.begin(9600);
-  
   Motor.initializePins();
+  dht.begin();
+  delay(1500);
+   
   //CONNECT TO WIFI
   while (status != WL_CONNECTED) {
     Serial.print("Attempting to connect to Wifi Network: ");
     Serial.println(ssid);
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print(" CONNECTING TO  ");
+    lcd.setCursor(0,1);
+    lcd.print("      WIFI      ");
     status = WiFi.begin(ssid, pass);
-  // WAIT FOR CONNECTION
-    delay(10000);
+    delay(7000);   // WAIT FOR CONNECTION
   }
 
-  Serial.print("You're connected to the network");
+  Serial.println("You're connected to the network");
+  lcd.clear();
+  lcd.print(" WIFI CONNECTED ");
   printCurrentNet();
   printWifiData();
-  ThingSpeak.begin(client);
+  delay(1500);
   
   Serial.println("Initializing data collection...");
   Serial.println();
-  dht.begin();
-  lcd.begin(16, 2);
+  lcd.clear();
   lcd.print("Collecting data...");
-  uint8_t i = 0;
   readData();
+  ThingSpeak.begin(client);
 }
 
 void loop() {
   currentMillis = millis();
-  lcdMenu();
 
-  if (Serial.available() > 0) {
-    sendSensorCommand();
-  }
+  if (Serial.available() > 0) { sendSensorCommand(); } 
   
   if (currentMillis - previousMillis01 > readDataInterval) {
     previousMillis01 = currentMillis; 
     readData();
-    printToSerial();
     printToInternet();
+    //printToSerial();
     //monitorSolution();
-  } 
+  }  
+  lcdMenu();
 }
 
 // print the SSID of the network you're attached to:
@@ -114,17 +124,16 @@ void loop() {
     IPAddress ip = WiFi.localIP();
     Serial.print("IP Address: ");
     Serial.println(ip);
-    Serial.println(ip);
   }
 
 //SEND A COMMAND TO AN ATLAS SCIENTIFIC SENSOR
   void sendSensorCommand() {
-    whichSensorString = Serial.readStringUntil(13);
+    String whichSensorString = Serial.readStringUntil(13);
     Serial.print("Connecting to: ");
     Serial.println(whichSensorString);
     Sensor.getCommand();
     
-    if (whichSensorString == "WT") { Sensor.WTsendCommand(); }
+    if      (whichSensorString == "WT") { Sensor.WTsendCommand(); }
     else if (whichSensorString == "EC") { Sensor.ECsendCommand(); }
     else if (whichSensorString == "PH") { Sensor.PHsendCommand(); }
     else if (whichSensorString == "DO") { Sensor.DOsendCommand(); }  
@@ -145,7 +154,7 @@ void loop() {
     //Sensor.readCB();
     //Sensor.readFR();
     Serial.println("Reading Complete.");
-    Serial.println();
+
   }
 
 /******************************************************************************
@@ -168,6 +177,7 @@ PRINT FUNCTIONS
 
 //PRINT DATA TO INTERNET
   void printToInternet() {
+    Serial.println("Sending data to ThingSpeak...");
     ThingSpeak.setField(1,Sensor.getWaterTemp());
     ThingSpeak.setField(2,Sensor.getConductivity());
     ThingSpeak.setField(3,Sensor.getPH());
@@ -176,7 +186,8 @@ PRINT FUNCTIONS
     ThingSpeak.setField(6,Sensor.getHumidity());
     ThingSpeak.setField(7,Sensor.getCarbon());
     ThingSpeak.setField(8,Sensor.getFlowRate());
-    ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
+    ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey); 
+    //Serial.println(); 
     }
 
 //PRINT DATA TO LCD DISPLAY
@@ -193,20 +204,21 @@ PRINT FUNCTIONS
 
 //PRINT FIRST PAGE TO LCD
   void printPageNumber0() {
+    int wtemp = Sensor.getWaterTemp();
     lcd.clear();
     lcd.setCursor(0, 0);
-    int wtemp = Sensor.getWaterTemp();
-    int atemp = Sensor.getAirTemp();
-    lcd.print("H20 ");
+    lcd.print("WT ");
     lcd.print(wtemp);
-    lcd.print("F ");
-    lcd.print("AIR ");
-    lcd.print(atemp);
-    lcd.print("F");
+    lcd.print("F  ");
+    lcd.setCursor(9, 0);
+    lcd.print("DO ");
+    lcd.print(Sensor.getOxygen());
+    lcd.print(" ");
     lcd.setCursor(0, 1);
     lcd.print("PH ");
     lcd.print(Sensor.getPH());
     lcd.print(" ");
+    lcd.setCursor(9, 1);
     lcd.print("EC ");
     lcd.print(Sensor.getConductivity());
     lcd.print("");
@@ -214,17 +226,23 @@ PRINT FUNCTIONS
 
 //PRINT SECOND PAGE TO LCD
   void printPageNumber1() {
+    int atemp = Sensor.getAirTemp();
     lcd.clear();
     lcd.setCursor(0, 0);
-    lcd.print("HUMIDITY ");
+    lcd.print("AT ");
+    lcd.print(atemp);
+    lcd.print("F  ");
+    lcd.setCursor(9, 0);
+    lcd.print("HM ");
     lcd.print(Sensor.getHumidity());
     lcd.print(" ");
     lcd.setCursor(0, 1);
-    lcd.print("DO ");
-    lcd.print(Sensor.getOxygen());
-    lcd.print(" ");
-    lcd.print("CO2 ");
+    lcd.print("CB ");
     lcd.print(Sensor.getCarbon());
+    lcd.print(" ");
+    lcd.setCursor(9, 1);
+    lcd.print("PR ");
+    lcd.print(Sensor.getFlowRate());
     lcd.print("");
   }
 
@@ -251,10 +269,10 @@ void monitorSolution() {
   
   //if (Sensor.getWaterTemp() < WT_low) { Motor.raiseWaterTemp(); }
   //if (Sensor.getWaterTemp() > WT_high) { Motor.lowerWaterTemp(); }
-  if (Sensor.getConductivity() < EC_low) { Motor.raiseConductivity(); }
+  //if (Sensor.getConductivity() < EC_low) { Motor.raiseConductivity(); }
   //if (Sensor.getConductivity() > EC_high) { Motor.lowerConductivity(); }  
-  if (Sensor.getPH() < PH_low) { Motor.raisePH(); }
-  if (Sensor.getPH() > PH_high) { Motor.lowerPH(); }  
+ // if (Sensor.getPH() < PH_low) { Motor.raisePH(); }
+  //if (Sensor.getPH() > PH_high) { Motor.lowerPH(); }  
   //if (Sensor.getOxygen() < DO_low) { Motor.raiseOxygenLevel(); }
   //if (Sensor.getOxygen() > DO_high) { Motor.lowerOxygenLevel(); }
   //if (Sensor.getHumidity() < HM_low) { Motor.raiseOxygenLevel(); }
