@@ -11,3 +11,5 @@ Marshall Amey,
 Kathya Alfaro,
 Isaac Olson,
 and Madeline Wrzesinski
+
+![wiring-diagram](https://user-images.githubusercontent.com/24355731/27982105-e6b00328-635f-11e7-8721-fe0cd6cad272.JPG)
