@@ -5,7 +5,7 @@
 #include "DHT.h"
 
 // Establish Serial Port 4
-SoftwareSerial Serial4 (3,2);
+SoftwareSerial Serial4 (13,12);
 
 // DHT Temperature and Humidity Sensor
 #define DHTPIN 4        
