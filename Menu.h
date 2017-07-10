@@ -25,6 +25,7 @@ class MENU {
     int lcdPageNumber = 0;
     int lcdIdleTime = 10 * 1000;
     long menuScrollTime = 5 * 1000;
+    uint8_t buttons = 0;
      
   public:
 
@@ -40,9 +41,18 @@ MAIN FUNCTIONS
 
 //DISPLAYS INFORMATION ON LCD SCREEN
   void lcdMenu(){
+
+    buttons = lcd.readButtons();
+    if (buttons != 0 ){
+      lastButtonPress = millis();
+      Serial.print(buttons);
+      Serial.print(lastButtonPress);
+      
+    }
+    currentMillis = millis();
+    ifIdleReturnHome();  
     
-    //WAIT FOR BUTTON RELEASE TO CHANGE STATE
-    while(ReadButtons() != 0) {}
+   
 
     //CHANGE STATE
     switch (opState){
@@ -71,6 +81,7 @@ MAIN FUNCTIONS
       phDOWN();
       break;   
     }
+  //return;
   }
 
 
@@ -137,50 +148,50 @@ MAIN FUNCTIONS
 
 //**HOME SCREEN**//
   void HomeScreen(){
+
+ //GOES TO MAIN MENU IF ANY BUTTON IS PUSHED
+
     uint8_t buttons = 0;
-    while(true){
-      buttons = ReadButtons();
-
-      //GOES TO MAIN MENU IF ANY BUTTON IS PUSHED
-      if (buttons !=0 ){
-        opState = MAINMENU;
-        return;   
+    //while(true){
+      buttons = lcd.readButtons();
+      
+      if (buttons != 0 ){
+        opState = MAINMENU; 
+        Serial.print("Switching to ");
+        Serial.println(opState);
       } 
-
-      //OR ELSE DISPLAYS DATA EVERY (menuScrollTime) SECONDS
-      else{
-        currentMillis = millis();       
-        if (currentMillis - previousMillis > menuScrollTime) {
+      
+      //DISPLAYS DATA EVERY (menuScrollTime) SECONDS     
+      else {
+        currentMillis = millis();     
+        if (currentMillis - previousMillis > menuScrollTime){
           printToLCD();
-          previousMillis = currentMillis;
-        }  
+          previousMillis = currentMillis;  
+        }
       }
-    }
+    //}
   }
-
+    
   
 //**MAIN MENU SCREEN**//
   void MainMenu(){
-    lcd.clear();
-    uint8_t buttons = 0;
-    while(true){
-      buttons = ReadButtons();
-      menuCycleReset(0,1);
-      ifIdleReturnHome();
-      
+    lcd.clear();     
+    menuCycleReset(0,1);     
     //BUTTON ASSIGNMENTS
-        if (buttons & BUTTON_SELECT){selectButton();}
-        if (buttons & BUTTON_UP){upButton();}
-        if (buttons & BUTTON_DOWN){downButton();}      
-        if (buttons & BUTTON_LEFT){leftButton(HOME);return;}          
-        if (buttons & BUTTON_RIGHT){
-          if(currentMenuItem == 0){rightButton(SENSORS);return;}
-          if(currentMenuItem == 1){rightButton(MOTORS);return;}
-        }
+    //while (true){
+      if (buttons & BUTTON_SELECT){selectButton();}
+      if (buttons & BUTTON_UP){upButton();}
+      if (buttons & BUTTON_DOWN){downButton();}      
+      if (buttons & BUTTON_LEFT){leftButton(HOME);}          
+      if (buttons & BUTTON_RIGHT){
+        if(currentMenuItem == 0){rightButton(SENSORS);}
+        if(currentMenuItem == 1){rightButton(MOTORS);}
+      }
+    //}
       
     //MENU ITEMS
       if(currentMenuItem == 0){
-        //lcd.clear();
+        lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print(">");
         lcd.setCursor(1, 0);
@@ -189,23 +200,20 @@ MAIN FUNCTIONS
         lcd.print("Motors");
       }      
       if(currentMenuItem == 1){
-        //lcd.clear();
+        lcd.clear();
         lcd.setCursor(1, 0);
         lcd.print("Sensors");
         lcd.setCursor(0, 1);
         lcd.print(">");
         lcd.print("Motors");
       }
-    }   
+  return;   
   }
 
 
 //**SENSOR SCREEN**//
   void Sensors(){
     lcd.clear();
-    uint8_t buttons = 0;
-    while(true){
-      buttons = ReadButtons();
       menuCycleReset(0, 7);
       ifIdleReturnHome();
       
@@ -213,8 +221,8 @@ MAIN FUNCTIONS
       if (buttons & BUTTON_SELECT){selectButton();}      
       if (buttons & BUTTON_UP){upButton();}
       if (buttons & BUTTON_DOWN){downButton();}      
-      if (buttons & BUTTON_LEFT){leftButton(MAINMENU);return;} 
-      if (buttons & BUTTON_RIGHT){rightButton(HOME);return;}
+      if (buttons & BUTTON_LEFT){leftButton(MAINMENU);} 
+      if (buttons & BUTTON_RIGHT){rightButton(HOME);}
 
     //MENU ITEMS
       if(currentMenuItem == 0){
@@ -273,7 +281,7 @@ MAIN FUNCTIONS
         lcd.setCursor(0, 1);
         lcd.print(Sensor.getFlowRate());
       } 
-    }
+    //}
   }
 
 
@@ -281,8 +289,8 @@ MAIN FUNCTIONS
   void Motors(){
     lcd.clear();
     uint8_t buttons = 0;
-    while(true){
-      buttons = ReadButtons();
+    //while(true){
+     
       menuCycleReset(0, 3);      
       ifIdleReturnHome(); 
        
@@ -328,7 +336,7 @@ MAIN FUNCTIONS
         lcd.setCursor(0, 1);
         lcd.print("Nutrient A");
       }      
-    }
+    //}
   }
 
 
@@ -336,8 +344,8 @@ MAIN FUNCTIONS
   void NutrientA(){
     lcd.clear();
     uint8_t buttons = 0;
-    while(true){
-      buttons = ReadButtons();
+    //while(true){
+      
       ifIdleReturnHome();
             
       //BUTTON ASSIGNMENTS 
@@ -356,7 +364,7 @@ MAIN FUNCTIONS
       lcd.print("Hold RIGHT bttn");
       lcd.setCursor(0, 1);
       lcd.print("to prime pump");
-    }
+    //}
   }
   
 
@@ -365,7 +373,7 @@ MAIN FUNCTIONS
     lcd.clear();
     uint8_t buttons = 0;
     while(true){
-      buttons = ReadButtons();
+     
       ifIdleReturnHome();
             
       //BUTTON ASSIGNMENTS 
@@ -394,7 +402,7 @@ MAIN FUNCTIONS
     lcd.clear();
     uint8_t buttons = 0;
     while(true){
-      buttons = ReadButtons();
+      
       ifIdleReturnHome();
             
       //BUTTON ASSIGNMENTS 
@@ -420,9 +428,8 @@ MAIN FUNCTIONS
 //**PH DOWN PUMP**//
   void phDOWN(){
     lcd.clear();
-    uint8_t buttons = 0;
+    
     while(true){
-      buttons = ReadButtons();
       ifIdleReturnHome();
             
       //BUTTON ASSIGNMENTS 
@@ -449,14 +456,7 @@ MAIN FUNCTIONS
  * MEMBER FUNCTIONS
  ********************************************************************************/
 
-//READS BUTTON PRESSES 
-  uint8_t ReadButtons(){
-    uint8_t buttons = lcd.readButtons();
-    if (buttons != 0){
-      lastButtonPress = millis();
-    }
-    return buttons;
-  }  
+ 
 
   
 //RETURNS USER TO HOME SCREEN IF IDLE 
@@ -499,7 +499,7 @@ MAIN FUNCTIONS
   void leftButton(operatingState newOpState){
       opState = newOpState;
       //currentMenuItem = 0;
-      //return;
+      return;
   }
 
 
@@ -507,7 +507,7 @@ MAIN FUNCTIONS
   void rightButton(operatingState newOpState){
       opState = newOpState;
       //currentMenuItem = 0;
-      //return;
+      return;
   }
 
 
