@@ -16,7 +16,8 @@ class MOTOR {
     int fertA_pin = 34;
     int pHdown_pin = 35;
     int pHup_pin = 36;
-    int waterValve_pin = 37;  
+    //int waterValve_pin = 37; 
+    int reservoir_pin = 37; 
 
 //TIMING VARIABLES
     long pumpRunTime = 2000;
@@ -38,19 +39,19 @@ MEMBER FUNCTIONS
       pinMode(pHdown_pin, OUTPUT);
       pinMode(fertA_pin, OUTPUT);
       pinMode(fertB_pin, OUTPUT);
-      pinMode(waterValve_pin, OUTPUT);
       pinMode(stonePump_pin, OUTPUT);
       pinMode(waterPump_pin, OUTPUT);
       pinMode(lights_pin, OUTPUT);
+      pinMode(reservoir_pin, OUTPUT);
     
       digitalWrite(pHup_pin, HIGH);
       digitalWrite(pHdown_pin, HIGH);
       digitalWrite(fertA_pin, HIGH);
       digitalWrite(fertB_pin, HIGH);
-      digitalWrite(waterValve_pin, HIGH);
       digitalWrite(stonePump_pin, LOW);
       digitalWrite(waterPump_pin, LOW);
       digitalWrite(lights_pin, LOW);
+      digitalWrite(reservoir_pin, HIGH);
     }
 
 //RAISE WATER TEMPERATURE OF THE NUTRIENT SOLUTION
@@ -168,8 +169,8 @@ int getWaterPump_pin(){
   return waterPump_pin;
 }
 
-int getWaterValve_pin(){
-  return waterValve_pin;
+int getReservoir_pin(){
+  return reservoir_pin;
 }
 
 };
