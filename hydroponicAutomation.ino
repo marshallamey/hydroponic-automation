@@ -1,4 +1,3 @@
-
 /*
 This is a program to automate and control the parameters of a hydroponic garden.
 Code was designed to be run with an Arduino Mega 2560
@@ -11,6 +10,7 @@ Make sure to use Carriage Return only
 Baud rate is 9600 bps
 */
 
+
 //LIBRARIES
 //#include <ArduinoUnit.h>
 #include <SoftwareSerial.h>  
@@ -20,11 +20,13 @@ Baud rate is 9600 bps
 #include "ThingSpeak.h"
 #include "Sensor.h"
 #include "Motor.h"
-#include "Menu.h"
+//#include "Menu.h"
 #include "DHT.h"  
+
 
 // TIMING VARIABLES
 long readDataInterval = 30000;
+long printDataInterval = 5000;
 unsigned long currentMillis;
 unsigned long previousMillis01 = 0;
 unsigned long previousMillis02 = 0;
@@ -36,27 +38,19 @@ int status = WL_IDLE_STATUS;
 unsigned long myChannelNumber = 298095;
 const char * myWriteAPIKey = "F8Q6F3XFDI3QDLUY";
 
-/*
-//LCD MENU VARIABLES
-int currentMenuItem = 0;
-//int lastState = 0;
-unsigned long lastButtonPress = 0;
-int lcdPageNumber = 0;
-int lcdIdleTime = 10 * 1000;
-long menuScrollTime = 5 * 1000;
-enum operatingState {HOME, MENU, RIGHT, SENSORS, MOTORS, NUTRIENT_A, NUTRIENT_B, PH_UP, PH_DOWN};                      
-*/
 
-//SENSOR Sensor;
-//MOTOR Motor;
-MENU Menu;
-//Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
-//operatingState opState = HOME;
-WiFiClient  client;
+//INITIALIZERS
+int lcdPageNumber = 0;
+SENSOR Sensor;
+MOTOR Motor;
+Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
+WiFiClient client;
+
 
 /*************************************************************************************
 SETUP AND LOOP FUNCTIONS
 *************************************************************************************/
+
 
 void setup() {
   lcd.begin(16,2);
@@ -70,11 +64,13 @@ void setup() {
   Serial2.begin(9600);
   Serial3.begin(9600);
   Serial4.begin(9600);
+  Serial5.begin(9600);
+ 
   Motor.initializePins();
   dht.begin();
   delay(1500);
    
-  //CONNECT TO WIFI
+/*  //Connect to WiFi
   while (status != WL_CONNECTED) {
     Serial.print("Attempting to connect to Wifi Network: ");
     Serial.println(ssid);
@@ -93,7 +89,7 @@ void setup() {
   printCurrentNet();
   printWifiData();
   delay(1500);
-  
+  */
   Serial.println("Initializing data collection...");
   Serial.println();
   lcd.clear();
@@ -101,6 +97,7 @@ void setup() {
   readData();
   ThingSpeak.begin(client);
 }
+
 
 void loop() {
   currentMillis = millis();
@@ -110,25 +107,21 @@ void loop() {
   if (currentMillis - previousMillis01 > readDataInterval) {
     previousMillis01 = currentMillis; 
     readData();
-    printToInternet();
-    //printToSerial();
+    //printToInternet();
     //monitorSolution();
   }  
-  Menu.lcdMenu();
+
+  if (currentMillis - previousMillis02 > printDataInterval) {
+    previousMillis02 = currentMillis; 
+    printToLCD();
+  }  
 }
 
-// print the SSID of the network you're attached to:
-  void printCurrentNet() {
-    Serial.print("SSID: ");
-    Serial.println(WiFi.SSID());
-  }
 
-// print your WiFi shield's IP address:
-  void printWifiData() {  
-    IPAddress ip = WiFi.localIP();
-    Serial.print("IP Address: ");
-    Serial.println(ip);
-  }
+/******************************************************************************
+MEMBER FUNCTIONS
+******************************************************************************/
+
 
 //SEND A COMMAND TO AN ATLAS SCIENTIFIC SENSOR
   void sendSensorCommand() {
@@ -155,15 +148,76 @@ void loop() {
     Sensor.readDO();
     Sensor.readHM();
     Sensor.readAT();
-    //Sensor.readCB();
-    //Sensor.readFR();
+    Sensor.readCB();
+    Sensor.readPR();
+    //Sensor.readWL();
     Serial.println("Reading Complete.");
-
+    Serial.println();
   }
+
+
+//MONITOR PARAMETERS OF SOLUTION
+  void monitorSolution() {
+    //**VARIABLE PARAMETERS CAN BE CHANGED HERE**//
+    float WT_high = 80.0;
+    float WT_low = 70.0;
+    float EC_high = 2200;
+    float EC_low = 1800;
+    float PH_high = 6.6;
+    float PH_low = 5.8;
+    float DO_high = 30;
+    float DO_low = 12;  
+    float HM_high = 80.0;
+    float HM_low = 40.0;
+    float AT_high = 80.0;
+    float AT_low = 50.0;
+    float CB_high;
+    float CB_low;
+    float PR_high;
+    float PR_low;
+    float WL_high;
+    float WL_low;
+      
+    //if (Sensor.getWaterTemp() < WT_low) { Motor.raiseWaterTemp(); }
+    //if (Sensor.getWaterTemp() > WT_high) { Motor.lowerWaterTemp(); }
+    //if (Sensor.getConductivity() < EC_low) { Motor.raiseConductivity(); }
+    //if (Sensor.getConductivity() > EC_high) { Motor.lowerConductivity(); }  
+    //if (Sensor.getPH() < PH_low) { Motor.raisePH(); }
+    //if (Sensor.getPH() > PH_high) { Motor.lowerPH(); }  
+    //if (Sensor.getOxygen() < DO_low) { Motor.raiseOxygenLevel(); }
+    //if (Sensor.getOxygen() > DO_high) { Motor.lowerOxygenLevel(); }
+    //if (Sensor.getHumidity() < HM_low) { Motor.raiseOxygenLevel(); }
+    //if (Sensor.getHumidity() > HM_high) { Motor.lowerOxygenLevel(); }
+    //if (Sensor.getAirTemp() < AT_low) { Motor.raiseAirTemp(); }
+    //if (Sensor.getAirTemp() > AT_high) { Motor.lowerAirTemp(); }
+    //if (Sensor.getCarbon() < CB_low) { Motor.raiseCarbon(); }
+    //if (Sensor.getCarbon() > CB_high) { Motor.lowerCarbon(); }
+    //if (Sensor.getPar() < FR_low) { Motor.raiseFlowRate(); }
+    //if (Sensor.getPar() > FR_high) { Motor.lowerFlowRate(); }
+    //if (Sensor.getWaterLevel() < WL_low) { Motor.raiseFlowRate(); }
+    //if (Sensor.getWaterLevel() > WL_high) { Motor.lowerFlowRate(); }
+  }
+
 
 /******************************************************************************
 PRINT FUNCTIONS
 ******************************************************************************/
+
+
+//PRINT SSID OF NETWORK CONNECTED TO
+  void printCurrentNet() {
+    Serial.print("SSID: ");
+    Serial.println(WiFi.SSID());
+  }
+
+
+//PRINT WIFI SHIELD'S IP ADDRESS
+  void printWifiData() {  
+    IPAddress ip = WiFi.localIP();
+    Serial.print("IP Address: ");
+    Serial.println(ip);
+  }
+
 
 //PRINT DATA TO SERIAL MONITORS
   void printToSerial(){
@@ -174,10 +228,12 @@ PRINT FUNCTIONS
     Sensor.printDO();
     Sensor.printHM();
     Sensor.printAT();
-    //Sensor.printCB();
-    //Sensor.printFR();
+    Sensor.printCB();
+    Sensor.printPR();
+    //Sensor.printWL();
     Serial.println();
   }
+
 
 //PRINT DATA TO INTERNET
   void printToInternet() {
@@ -189,46 +245,66 @@ PRINT FUNCTIONS
     ThingSpeak.setField(5,Sensor.getAirTemp());
     ThingSpeak.setField(6,Sensor.getHumidity());
     ThingSpeak.setField(7,Sensor.getCarbon());
-    ThingSpeak.setField(8,Sensor.getFlowRate());
+    ThingSpeak.setField(8,Sensor.getPar());
     ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey); 
-    //Serial.println(); 
+    Serial.println(); 
     }
 
-//MONITOR PARAMETERS OF SOLUTION
-void monitorSolution() {
 
-  //**VARIABLE PARAMETERS CAN BE CHANGED HERE**//
-  float WT_high = 80.0;
-  float WT_low = 70.0;
-  float EC_high = 2200;
-  float EC_low = 1800;
-  float PH_high = 6.6;
-  float PH_low = 5.8;
-  float DO_high = 30;
-  float DO_low = 12;  
-  float HM_high = 80.0;
-  float HM_low = 40.0;
-  float AT_high = 80.0;
-  float AT_low = 50.0;
-  float CB_high;
-  float CB_low;
-  float FR_high;
-  float FR_low;
-  
-  //if (Sensor.getWaterTemp() < WT_low) { Motor.raiseWaterTemp(); }
-  //if (Sensor.getWaterTemp() > WT_high) { Motor.lowerWaterTemp(); }
-  //if (Sensor.getConductivity() < EC_low) { Motor.raiseConductivity(); }
-  //if (Sensor.getConductivity() > EC_high) { Motor.lowerConductivity(); }  
-  //if (Sensor.getPH() < PH_low) { Motor.raisePH(); }
-  //if (Sensor.getPH() > PH_high) { Motor.lowerPH(); }  
-  //if (Sensor.getOxygen() < DO_low) { Motor.raiseOxygenLevel(); }
-  //if (Sensor.getOxygen() > DO_high) { Motor.lowerOxygenLevel(); }
-  //if (Sensor.getHumidity() < HM_low) { Motor.raiseOxygenLevel(); }
-  //if (Sensor.getHumidity() > HM_high) { Motor.lowerOxygenLevel(); }
-  //if (Sensor.getAirTemp() < AT_low) { Motor.raiseAirTemp(); }
-  //if (Sensor.getAirTemp() > AT_high) { Motor.lowerAirTemp(); }
-  //if (Sensor.getCarbon() < CB_low) { Motor.raiseCarbon(); }
-  //if (Sensor.getCarbon() > CB_high) { Motor.lowerCarbon(); }
-  //if (Sensor.getFlowRate() < FR_low) { Motor.raiseFlowRate(); }
-  //if (Sensor.getFlowRate() > FR_high) { Motor.lowerFlowRate(); }
-}
+//PRINT DATA TO LCD DISPLAY IN TWO SEPARATE PAGES
+  void printToLCD() {
+    if (lcdPageNumber == 0) {
+      printPageNumber0();
+      lcdPageNumber = 1;
+    }
+    else {
+      printPageNumber1();
+      lcdPageNumber = 0;
+    }
+  }
+
+
+//PRINT FIRST PAGE TO LCD
+  void printPageNumber0() {
+    int wtemp = Sensor.getWaterTemp();
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("WT ");
+    lcd.print(wtemp);
+    lcd.print("F  ");
+    lcd.setCursor(9, 0);
+    lcd.print("DO ");
+    lcd.print(Sensor.getOxygen());
+    lcd.print(" ");
+    lcd.setCursor(0, 1);
+    lcd.print("PH ");
+    lcd.print(Sensor.getPH());
+    lcd.print(" ");
+    lcd.setCursor(9, 1);
+    lcd.print("EC ");
+    lcd.print(Sensor.getConductivity());
+    lcd.print("");
+  }
+
+
+//PRINT SECOND PAGE TO LCD
+  void printPageNumber1() {
+    int atemp = Sensor.getAirTemp();
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("AT ");
+    lcd.print(atemp);
+    lcd.print("F  ");
+    lcd.setCursor(9, 0);
+    lcd.print("HM ");
+    lcd.print(Sensor.getHumidity());
+    lcd.print(" ");
+    lcd.setCursor(0, 1);
+    lcd.print("CB ");
+    lcd.print(Sensor.getCarbon());
+    lcd.print(" ");
+    lcd.setCursor(9, 1);
+    lcd.print("PR ");
+    lcd.print(Sensor.getPar());
+    lcd.print("");
+  }
