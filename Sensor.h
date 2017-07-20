@@ -4,13 +4,21 @@
 #include <SoftwareSerial.h>
 #include "DHT.h"
 
-// Establish Serial Port 4
-SoftwareSerial Serial4 (13,12);
+// Establish Serial Port 4  (RX, TX)
+SoftwareSerial Serial4 (13, 12);
+SoftwareSerial Serial5 (69, 68);
+
+// Read the gas density command /Don't change the order
+unsigned char hexdata[9] = {0xFF,0x01,0x86,0x00,0x00,0x00,0x00,0x00,0x79}; 
 
 // DHT Temperature and Humidity Sensor
 #define DHTPIN 4        
 #define DHTTYPE DHT22   
 DHT dht(DHTPIN, DHTTYPE);
+
+// E-TAPE LIQUID LEVEL SENSOR
+#define SERIESRESISTOR 560    
+#define SENSORPIN A4 
 
 
 class SENSOR {
@@ -23,8 +31,9 @@ class SENSOR {
     float oxygen;
     float humidity;
     float airTemp;
-    float carbon;
-    float flowRate;
+    long carbon;
+    float par;
+    float waterLevel;
 
   public:
 
@@ -117,6 +126,7 @@ SEND FUNCTIONS
 
 //SEND COMMAND TO DISSOLVED OXYGEN SENSOR (DO)  
     void DOsendCommand() {
+      Serial4.listen();
       Serial4.print(commandString);
       Serial4.print('\r');
       Serial.print("Response from DO: ");
@@ -194,6 +204,7 @@ READ FUNCTIONS
 
 //READ DATA FROM DISSOLVED OXYGEN SENSOR (DO)
     float readDO() {
+      Serial4.listen();
       Serial4.print('R');
       Serial4.print('\r');
     
@@ -228,8 +239,45 @@ READ FUNCTIONS
     }
  
 //READ DATA FROM CARBON DIOXIDE SENSOR (CB)
+    long readCB() {
+      Serial5.listen();
+      Serial5.write(hexdata,9);
+      delay(500);
 
-//READ DATA FROM FLOW RATE SENSOR (FR)
+      for(int i=0,j=0;i<9;i++){
+        if (Serial5.available()>0){
+          
+          long hi, lo;
+          int ch = Serial5.read();
+    
+          if(i==2){ hi=ch; }   //High concentration
+          if(i==3){ lo=ch; }   //Low concentration
+          if(i==8){
+            carbon = hi*256+lo;  //CO2 concentration     
+          }
+        }       
+      } 
+      return carbon;  
+    } 
+
+//READ DATA FROM FLOW RATE SENSOR (PR)
+  float readPR(){   
+    float intercept = 0;
+    float slope = 430;
+    
+    float count = analogRead(A0);
+    float voltage = count / 1023 * 5.0; 
+    par = intercept + voltage * slope; 
+    return par;
+  }
+
+//READ DATA FROM WATER LEVEL SENSOR (WL)
+  float readWL(){ 
+    waterLevel = analogRead(SENSORPIN);
+    waterLevel = (1023 / waterLevel) - 1;
+    waterLevel = SERIESRESISTOR / waterLevel;
+    return waterLevel;
+  }
    
 /********************************************************************************************
 PRINT FUNCTIONS
@@ -283,9 +331,29 @@ PRINT FUNCTIONS
     }
 
 //PRINT CB DATA TO SERIAL MONITOR
+    void printCB() {
+      Serial.print("CO2 Concentration: ");
+      Serial.print("\t");
+      Serial.print(carbon);
+      Serial.println("ppm"); 
+    }
 
-//PRINT FR DATA TO SERIAL MONITOR
+//PRINT PR DATA TO SERIAL MONITOR
+    void printPR() {
+      Serial.print("PAR Level: ");
+      Serial.print("\t");
+      Serial.print(par);
+      Serial.println("micromoles/m*s"); 
+    }
 
+//PRINT WL DATA TO SERIAL MONITOR
+    void printWL() {
+      Serial.print("Water Level: ");
+      Serial.print("\t"); // tab character
+      Serial.print(waterLevel);
+      Serial.println(" "); 
+    }
+    
 /*************************************************************************************************
 ACCESSOR FUNCTIONS
 *************************************************************************************************/
@@ -321,13 +389,19 @@ ACCESSOR FUNCTIONS
     }
 
 //GET CARBON DIOXIDE
-    float getCarbon(){
+    long getCarbon(){
       return carbon;
     }
 
-//GET FLOW RATE
-    float getFlowRate(){
-      return flowRate;
+//GET PAR LEVEL
+    float getPar(){
+      return par;
     }
+
+//GET WATER LEVEL
+    float getWaterLevel(){
+      return waterLevel;
+    }
+    
 };
 #endif
