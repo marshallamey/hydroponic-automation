@@ -242,7 +242,7 @@ PRINT FUNCTIONS
   void printToInternet() {
       String Readings = "field1= " + String(Sensor.getWaterTemp()) + "&field2= " + String(Sensor.getConductivity()) 
     + "&field3= " + String(Sensor.getPH()) + "&field4= " + String(Sensor.getOxygen())
-    + "&field5= " + String(Sensor.getAirTemp()) + "&field6= " + String(Sensor.getHumidity());
+    + "&field5= " + String(Sensor.getAirTemp()) + "&field6= " + String(Sensor.getHumidity()) + "&field7= " + String(Sensor.getCarbon()) + "&field8= " + String(Sensor.getPar());
 
       
       
@@ -269,21 +269,6 @@ PRINT FUNCTIONS
         delay(1000);
         asm volatile ("  jmp 0");
       }    
-
-
-    
-//    Serial.println("Sending data to ThingSpeak...");
-//    ThingSpeak.setField(1,Sensor.getWaterTemp());
-//    ThingSpeak.setField(2,Sensor.getConductivity());
-//    ThingSpeak.setField(3,Sensor.getPH());
-//    ThingSpeak.setField(4,Sensor.getOxygen());
-//    ThingSpeak.setField(5,Sensor.getAirTemp());
-//    ThingSpeak.setField(6,Sensor.getHumidity());
-//    ThingSpeak.setField(7,Sensor.getCarbon());
-//    ThingSpeak.setField(8,Sensor.getPar());
-//    ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey); 
-//    Serial.println(); 
-//    ThingSpeak.getHttpResponce();
     }
 
 
