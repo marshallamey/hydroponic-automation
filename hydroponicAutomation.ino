@@ -35,8 +35,10 @@ unsigned long previousMillis02 = 0;
 char ssid[] = "CoC Student Center";    //  your network SSID (name) 
 char pass[] = "sanantonio210";   // your network password
 int status = WL_IDLE_STATUS;
+
+char thingSpeakAddress[] = "api.thingspeak.com";
 unsigned long myChannelNumber = 298095;
-const char * myWriteAPIKey = "F8Q6F3XFDI3QDLUY";
+String myWriteAPIKey = "F8Q6F3XFDI3QDLUY";
 
 
 //INITIALIZERS
@@ -44,6 +46,7 @@ int lcdPageNumber = 0;
 SENSOR Sensor;
 MOTOR Motor;
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
+WiFiServer server(80);
 WiFiClient client;
 
 
@@ -70,7 +73,7 @@ void setup() {
   dht.begin();
   delay(1500);
    
-/*  //Connect to WiFi
+  //Connect to WiFi
   while (status != WL_CONNECTED) {
     Serial.print("Attempting to connect to Wifi Network: ");
     Serial.println(ssid);
@@ -89,13 +92,13 @@ void setup() {
   printCurrentNet();
   printWifiData();
   delay(1500);
-  */
+  
   Serial.println("Initializing data collection...");
   Serial.println();
   lcd.clear();
   lcd.print("Collecting data...");
   readData();
-  ThingSpeak.begin(client);
+  //ThingSpeak.begin(client);
 }
 
 
@@ -107,7 +110,7 @@ void loop() {
   if (currentMillis - previousMillis01 > readDataInterval) {
     previousMillis01 = currentMillis; 
     readData();
-    //printToInternet();
+    printToInternet();
     //monitorSolution();
   }  
 
@@ -237,17 +240,50 @@ PRINT FUNCTIONS
 
 //PRINT DATA TO INTERNET
   void printToInternet() {
-    Serial.println("Sending data to ThingSpeak...");
-    ThingSpeak.setField(1,Sensor.getWaterTemp());
-    ThingSpeak.setField(2,Sensor.getConductivity());
-    ThingSpeak.setField(3,Sensor.getPH());
-    ThingSpeak.setField(4,Sensor.getOxygen());
-    ThingSpeak.setField(5,Sensor.getAirTemp());
-    ThingSpeak.setField(6,Sensor.getHumidity());
-    ThingSpeak.setField(7,Sensor.getCarbon());
-    ThingSpeak.setField(8,Sensor.getPar());
-    ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey); 
-    Serial.println(); 
+      String Readings = "field1= " + String(Sensor.getWaterTemp()) + "&field2= " + String(Sensor.getConductivity()) 
+    + "&field3= " + String(Sensor.getPH()) + "&field4= " + String(Sensor.getOxygen())
+    + "&field5= " + String(Sensor.getAirTemp()) + "&field6= " + String(Sensor.getHumidity());
+
+      
+      
+      if (client.connect(thingSpeakAddress, 80)) {
+        client.print("POST /update HTTP/1.1\n");
+        client.print("Host: api.thingspeak.com\n");
+        client.print("Connection: close\n");
+        client.print("X-THINGSPEAKAPIKEY: " + myWriteAPIKey + "\n");
+        client.print("Content-Type: application/x-www-form-urlencoded\n");
+        client.print("Content-Length: ");
+        client.print(Readings.length());
+        client.print("\n\n");
+        client.print(Readings);
+        //lastConnectionTime = millis();
+        client.stop();
+
+      if (client.connected()) {
+        Serial.println("Connecting to ThingSpeak...");
+        Serial.println();
+        }
+      }else {
+        // if you couldn't make a connection:
+        Serial.println("connection failed, reset in progress...");
+        delay(1000);
+        asm volatile ("  jmp 0");
+      }    
+
+
+    
+//    Serial.println("Sending data to ThingSpeak...");
+//    ThingSpeak.setField(1,Sensor.getWaterTemp());
+//    ThingSpeak.setField(2,Sensor.getConductivity());
+//    ThingSpeak.setField(3,Sensor.getPH());
+//    ThingSpeak.setField(4,Sensor.getOxygen());
+//    ThingSpeak.setField(5,Sensor.getAirTemp());
+//    ThingSpeak.setField(6,Sensor.getHumidity());
+//    ThingSpeak.setField(7,Sensor.getCarbon());
+//    ThingSpeak.setField(8,Sensor.getPar());
+//    ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey); 
+//    Serial.println(); 
+//    ThingSpeak.getHttpResponce();
     }
 
 
