@@ -22,9 +22,18 @@ Baud rate is 9600 bps
 #include "Motor.h"
 //#include "Menu.h"
 #include "DHT.h"  
+#include <Wire.h>
+//https://github.com/adafruit/RTClib
+#include "RTClib.h"
 
 
 // TIMING VARIABLES
+RTC_PCF8523 rtc;
+int lightStartHr = 17;
+int lightStartMin = 42;
+int lightStopHr = 17;
+int lightStopMin = 44;
+
 long readDataInterval = 30000;
 long printDataInterval = 5000;
 unsigned long currentMillis;
@@ -111,6 +120,7 @@ void loop() {
     previousMillis01 = currentMillis; 
     readData();
     printToInternet();
+//    manageLight();
     //monitorSolution();
   }  
 
@@ -242,7 +252,8 @@ PRINT FUNCTIONS
   void printToInternet() {
       String Readings = "field1= " + String(Sensor.getWaterTemp()) + "&field2= " + String(Sensor.getConductivity()) 
     + "&field3= " + String(Sensor.getPH()) + "&field4= " + String(Sensor.getOxygen())
-    + "&field5= " + String(Sensor.getAirTemp()) + "&field6= " + String(Sensor.getHumidity()) + "&field7= " + String(Sensor.getCarbon()) + "&field8= " + String(Sensor.getPar());
+    + "&field5= " + String(Sensor.getAirTemp()) + "&field6= " + String(Sensor.getHumidity())
+    + "&field7= " + String(Sensor.getCarbon()) + "&field8= " + String(Sensor.getPar());
 
       
       
@@ -257,18 +268,15 @@ PRINT FUNCTIONS
         client.print("\n\n");
         client.print(Readings);
         //lastConnectionTime = millis();
+        Serial.print("updated ThingSpeak at ");
+        printTime();
         client.stop();
-
-      if (client.connected()) {
-        Serial.println("Connecting to ThingSpeak...");
-        Serial.println();
-        }
       }else {
         // if you couldn't make a connection:
         Serial.println("connection failed, reset in progress...");
         delay(1000);
         asm volatile ("  jmp 0");
-      }    
+      }
     }
 
 
@@ -329,3 +337,31 @@ PRINT FUNCTIONS
     lcd.print(Sensor.getPar());
     lcd.print("");
   }
+
+  void printTime(){
+    DateTime now = rtc.now();
+    
+    Serial.print(now.year(), DEC);
+    Serial.print('/');
+    Serial.print(now.month(), DEC);
+    Serial.print('/');
+    Serial.print(now.day(), DEC);
+    Serial.print(" ");
+    Serial.print(now.hour(), DEC);
+    Serial.print(':');
+    Serial.print(now.minute(), DEC);
+    Serial.print(':');
+    Serial.print(now.second(), DEC);
+    Serial.println();
+  }
+
+//  void manageLight(){
+//    DateTime now = rtc.now();
+//    if (now.hour() >= lightStartHr && now.hour() <= lightStopHr){
+//      if(now.minute() >= lightStartMin && now.minute() <= lightStopMin){
+//        digitalWrite(lights_pin, LOW); 
+//      }else{
+//          digitalWrite(lights_pin, HIGH);
+//        }
+//    }
+//  }
