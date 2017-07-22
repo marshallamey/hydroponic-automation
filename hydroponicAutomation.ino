@@ -125,7 +125,6 @@ void setup() {
 
 void loop() {
   currentMillis = millis();
-  manageLights();
 
   if (Serial.available() > 0) { sendSensorCommand(); } 
   
