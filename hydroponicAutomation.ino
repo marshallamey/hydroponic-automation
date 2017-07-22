@@ -28,12 +28,9 @@ Baud rate is 9600 bps
 
 
 // TIMING VARIABLES
-RTC_PCF8523 rtc;
-int lightStartHr = 17;
-int lightStartMin = 42;
-int lightStopHr = 17;
-int lightStopMin = 44;
 
+int lightON_hr = 23;
+int lightOFF_hr = 15;
 long readDataInterval = 30000;
 long printDataInterval = 5000;
 unsigned long currentMillis;
@@ -57,6 +54,7 @@ MOTOR Motor;
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 WiFiServer server(80);
 WiFiClient client;
+RTC_PCF8523 rtc;
 
 
 /*************************************************************************************
@@ -77,11 +75,11 @@ void setup() {
   Serial3.begin(9600);
   Serial4.begin(9600);
   Serial5.begin(9600);
- 
+
   Motor.initializePins();
   dht.begin();
   delay(1500);
-   
+  manageLights();
   //Connect to WiFi
   while (status != WL_CONNECTED) {
     Serial.print("Attempting to connect to Wifi Network: ");
@@ -93,6 +91,21 @@ void setup() {
     lcd.print("      WIFI      ");
     status = WiFi.begin(ssid, pass);
     delay(7000);   // WAIT FOR CONNECTION
+  }
+
+  //CHECK TO MAKE SURE CLOCK IS INITIALIZED
+  if (! rtc.begin()) {
+    Serial.println("Couldn't find RTC");
+    while (1);
+  }
+  
+  if (! rtc.initialized()) {
+    Serial.println("RTC is NOT running!");
+    // following line sets the RTC to the date & time this sketch was compiled
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    // This line sets the RTC with an explicit date & time, for example to set
+    // January 21, 2014 at 3am you would call:
+    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
   }
 
   Serial.println("You're connected to the network");
@@ -107,12 +120,12 @@ void setup() {
   lcd.clear();
   lcd.print("Collecting data...");
   readData();
-  //ThingSpeak.begin(client);
 }
 
 
 void loop() {
   currentMillis = millis();
+  manageLights();
 
   if (Serial.available() > 0) { sendSensorCommand(); } 
   
@@ -120,8 +133,8 @@ void loop() {
     previousMillis01 = currentMillis; 
     readData();
     printToInternet();
-//    manageLight();
-    //monitorSolution();
+    //monitorSystem();
+    manageLights();
   }  
 
   if (currentMillis - previousMillis02 > printDataInterval) {
@@ -131,9 +144,9 @@ void loop() {
 }
 
 
-/******************************************************************************
-MEMBER FUNCTIONS
-******************************************************************************/
+/************************************************************************************************************
+                                          MEMBER FUNCTIONS
+************************************************************************************************************/
 
 
 //SEND A COMMAND TO AN ATLAS SCIENTIFIC SENSOR
@@ -170,7 +183,7 @@ MEMBER FUNCTIONS
 
 
 //MONITOR PARAMETERS OF SOLUTION
-  void monitorSolution() {
+  void monitorSystem() {
     //**VARIABLE PARAMETERS CAN BE CHANGED HERE**//
     float WT_high = 80.0;
     float WT_low = 70.0;
@@ -190,7 +203,7 @@ MEMBER FUNCTIONS
     float PR_low;
     float WL_high;
     float WL_low;
-      
+   
     //if (Sensor.getWaterTemp() < WT_low) { Motor.raiseWaterTemp(); }
     //if (Sensor.getWaterTemp() > WT_high) { Motor.lowerWaterTemp(); }
     //if (Sensor.getConductivity() < EC_low) { Motor.raiseConductivity(); }
@@ -212,9 +225,17 @@ MEMBER FUNCTIONS
   }
 
 
-/******************************************************************************
-PRINT FUNCTIONS
-******************************************************************************/
+//TURN LIGHTS ON AND OFF
+  void manageLights(){
+    DateTime now = rtc.now();  
+    if (now.hour() >= lightOFF_hr && now.hour() < lightON_hr) { digitalWrite(Motor.getLights_pin(), HIGH); }   
+    else { digitalWrite(Motor.getLights_pin(), LOW); } 
+  }
+
+
+/******************************************************************************************************************
+                                                  PRINT FUNCTIONS
+******************************************************************************************************************/
 
 
 //PRINT SSID OF NETWORK CONNECTED TO
@@ -232,7 +253,7 @@ PRINT FUNCTIONS
   }
 
 
-//PRINT DATA TO SERIAL MONITORS
+//PRINT DATA TO SERIAL MONITOR
   void printToSerial(){
     Serial.println("Printing data...");
     Sensor.printWT();
@@ -248,14 +269,50 @@ PRINT FUNCTIONS
   }
 
 
+//PRINT TIME TO SERIAL MONITOR
+  void printTime(){
+    DateTime now = rtc.now(); 
+    Serial.print(now.month(), DEC);
+    Serial.print('/');
+    Serial.print(now.day(), DEC);
+    Serial.print('/');
+    Serial.print(now.year(), DEC);
+    Serial.print(" ");
+    
+    if (now.hour() < 10){
+      Serial.print("0");
+      Serial.print(now.hour(), DEC);
+    }
+    else{
+      Serial.print(now.hour(), DEC);
+    }
+    Serial.print(':');
+    if (now.minute() < 10){
+      Serial.print("0");
+      Serial.print(now.minute(), DEC);
+    }
+    else{
+      Serial.print(now.minute(), DEC);
+    }
+    Serial.print(':');
+    if (now.second() < 10){
+      Serial.print("0");
+      Serial.print(now.second(), DEC);
+    }
+    else{
+      Serial.print(now.second(), DEC);
+    }
+    Serial.println();
+  }
+
+
 //PRINT DATA TO INTERNET
   void printToInternet() {
+    Serial.println("Sending data to ThingSpeak...");
       String Readings = "field1= " + String(Sensor.getWaterTemp()) + "&field2= " + String(Sensor.getConductivity()) 
     + "&field3= " + String(Sensor.getPH()) + "&field4= " + String(Sensor.getOxygen())
     + "&field5= " + String(Sensor.getAirTemp()) + "&field6= " + String(Sensor.getHumidity())
     + "&field7= " + String(Sensor.getCarbon()) + "&field8= " + String(Sensor.getPar());
-
-      
       
       if (client.connect(thingSpeakAddress, 80)) {
         client.print("POST /update HTTP/1.1\n");
@@ -268,13 +325,21 @@ PRINT FUNCTIONS
         client.print("\n\n");
         client.print(Readings);
         //lastConnectionTime = millis();
-        Serial.print("updated ThingSpeak at ");
+        Serial.print("Updated ThingSpeak at ");
         printTime();
+        Serial.println();
         client.stop();
-      }else {
+      }
+      else {
         // if you couldn't make a connection:
-        Serial.println("connection failed, reset in progress...");
-        delay(1000);
+        Serial.println("Connection to ThingSpeak failed! System reset in progress...");
+        Serial.println();
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("   RESETTING    ");
+        lcd.setCursor(0, 1);
+        lcd.print("     SYSTEM     ");
+        delay(1500);
         asm volatile ("  jmp 0");
       }
     }
@@ -338,30 +403,4 @@ PRINT FUNCTIONS
     lcd.print("");
   }
 
-  void printTime(){
-    DateTime now = rtc.now();
-    
-    Serial.print(now.year(), DEC);
-    Serial.print('/');
-    Serial.print(now.month(), DEC);
-    Serial.print('/');
-    Serial.print(now.day(), DEC);
-    Serial.print(" ");
-    Serial.print(now.hour(), DEC);
-    Serial.print(':');
-    Serial.print(now.minute(), DEC);
-    Serial.print(':');
-    Serial.print(now.second(), DEC);
-    Serial.println();
-  }
 
-//  void manageLight(){
-//    DateTime now = rtc.now();
-//    if (now.hour() >= lightStartHr && now.hour() <= lightStopHr){
-//      if(now.minute() >= lightStartMin && now.minute() <= lightStopMin){
-//        digitalWrite(lights_pin, LOW); 
-//      }else{
-//          digitalWrite(lights_pin, HIGH);
-//        }
-//    }
-//  }
