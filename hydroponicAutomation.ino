@@ -131,6 +131,7 @@ void loop() {
   if (currentMillis - previousMillis01 > readDataInterval) {
     previousMillis01 = currentMillis; 
     readData();
+    printToSerial();
     printToInternet();
     //monitorSystem();
     manageLights();
@@ -154,13 +155,15 @@ void loop() {
     Serial.print("Connecting to: ");
     Serial.println(whichSensorString);
     Sensor.getCommand();
+    Serial.println("Sending command...");
+    Serial.println();
     
     if      (whichSensorString == "WT") { Sensor.WTsendCommand(); }
     else if (whichSensorString == "EC") { Sensor.ECsendCommand(); }
     else if (whichSensorString == "PH") { Sensor.PHsendCommand(); }
     else if (whichSensorString == "DO") { Sensor.DOsendCommand(); }  
     
-    Serial.println("Sending command");  
+      
   }
 
 
