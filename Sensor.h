@@ -169,7 +169,14 @@ READ FUNCTIONS
 
 //READ DATA FROM CONDUCTIVITY SENSOR (EC)
     float readEC(){
-      Serial2.print('R');
+      Serial.print("Reading EC... ");
+      float intercept = 0;
+      float slope = 960;
+    
+      float count = analogRead(A0);
+      float voltage = count / 1023 * 5.0;
+      conductivity = intercept + voltage * slope; 
+      /*Serial2.print('R');
       Serial2.print('\r');
       
       String ECreadString = Serial2.readStringUntil(13);
@@ -181,7 +188,7 @@ READ FUNCTIONS
       Serial.print("Reading EC:  ");
       Serial.println(ECreadString);
 
-      ECreadString = "";      
+      ECreadString = "";  */    
       return conductivity;
     }
 
@@ -226,6 +233,9 @@ READ FUNCTIONS
       if (isnan(humidity)) {
         Serial.println("Failed to read humidity!");
       }
+      else{
+        Serial.println("Reading HM... ");
+      }
       return humidity;
     }
 
@@ -235,11 +245,15 @@ READ FUNCTIONS
       if (isnan(airTemp)) {
         Serial.println("Failed to read air temperature!");
       }
+      else{
+        Serial.println("Reading AT... ");
+      }
       return airTemp;
     }
  
 //READ DATA FROM CARBON DIOXIDE SENSOR (CB)
     long readCB() {
+      Serial.println("Reading CB... ");
       Serial5.listen();
       Serial5.write(hexdata,9);
       delay(500);
@@ -262,12 +276,6 @@ READ FUNCTIONS
 
 //READ DATA FROM FLOW RATE SENSOR (PR)
   float readPR(){   
-    float intercept = 0;
-    float slope = 430;
-    
-    float count = analogRead(A0);
-    float voltage = count / 1023 * 5.0; 
-    par = intercept + voltage * slope; 
     return par;
   }
 
