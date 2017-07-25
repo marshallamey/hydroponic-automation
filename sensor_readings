@@ -1,10 +1,97 @@
-<!-- Simple website for displaying sensor readings -->
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>ThingSpeak Live Colours</title>
+        <style type="text/css">
+            html, body, #content_area {
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            .color{
+                 height: 12%;
+            }
+            #credits{
+                 height: 4%;
+                 text-align: center;
+            }
+        </style>
+        <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js"></script>
+        <script type="text/javascript">
 
-<iframe width="1300" height="250" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/298095/charts/1?bgcolor=%23eeeeee&color=%230000ff&days=.1&dynamic=true&title=Water+Temperature&type=spline&xaxis=Time&yaxis=Water+Temperature+%28F%29&yaxismax=85&yaxismin=0&width=auto&height=auto"></iframe>
-<iframe width="1300" height="250" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/298095/charts/2?bgcolor=%23eeeeee&color=%2300ff00&days=.1&dynamic=true&title=Conductivity&type=line&xaxis=Time&yaxis=Conductivity+%28%CE%BCS%2Fm%29&yaxismax=1500&yaxismin=0&yaxismin=65&width=auto&height=auto"></iframe>
-<iframe width="1300" height="250" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/298095/charts/3?bgcolor=%23eeeeee&color=%23d62020&days=.1&dynamic=true&title=pH&type=line&xaxis=Time&yaxis=pH&yaxismax=7&yaxismin=5&width=auto&height=auto&width=auto&height=auto"></iframe>
-<iframe width="1300" height="250" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/298095/charts/4?bgcolor=%23eeeeee&color=%2378121a&days=.1&dynamic=true&title=Dissolved+Oxygen&type=line&xaxis=Time%60&yaxis=Dissolved+Oxygen+%28mg%2FL%29&yaxismax=20&yaxismin=0&width=auto&height=auto"></iframe>
-<iframe width="1300" height="250" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/298095/charts/5?bgcolor=%23eeeeee&color=%23123456&days=.1&dynamic=true&title=Air+Temperature&type=line&xaxis=Time&yaxis=Air+Temperature+%28F%29&yaxismax=85&yaxismin=65&width=auto&height=auto"></iframe>
-<iframe width="1300" height="250" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/298095/charts/6?bgcolor=%23eeeeee&color=%23ff0099&days=.1&dynamic=true&title=Humidity&type=line&xaxis=Time&yaxis=Humidity+%28%25%29&yaxismax=75&yaxismin=25&width=auto&height=auto"></iframe>
-<iframe width="1300" height="250" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/298095/charts/7?bgcolor=%23eeeeee&color=%23ffffff&days=.1&dynamic=true&title=Carbon+Dioxide&type=line&xaxis=Time&yaxis=Carbon+Dioxide&yaxismax=3000&yaxismin=0&width=auto&height=auto"></iframe>
-<iframe width="1300" height="250" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/298095/charts/8?bgcolor=%23eeeeee&color=%23ffffff&days=.1&dynamic=true&min=1&title=Photosynthetically+Active+Radiation&type=line&xaxis=Time&yaxis=PAR+Level+%28%C2%B5mol+%2Fm%5E2%2As%29&yaxismax=500&yaxismin=0&width=auto&height=auto"></iframe>
+		$(document).ready(function() {
+
+		    getUpdates();
+
+		    // check for new updates
+		    setInterval('getUpdates()',30000);
+
+		});
+
+		function getUpdates() {
+
+			// get the data with a webservice call
+			$.getJSON('http://api.thingspeak.com/channels/298095/feed/last.json?callback=?', function(data) {
+
+					// if the field1 has data update the page
+					if (data.field1) {
+
+                        document.getElementById("waterTemp").innerHTML = data.field1;
+                        document.getElementById("conductivity").innerHTML = data.field2;
+                        document.getElementById("pH").innerHTML = data.field3;
+                        document.getElementById("oxygen").innerHTML = data.field4;
+                        document.getElementById("humidity").innerHTML = data.field5;
+                        document.getElementById("airTemp").innerHTML = data.field6;
+                        document.getElementById("carbon").innerHTML = data.field7;
+                        document.getElementById("par").innerHTML = data.field8;
+
+                        document.getElementById("timestamp").innerHTML = data.created_at;
+					}
+
+			});
+
+		}
+
+	</script>
+    </head>
+    <body style='background-color: white;'>
+
+    <table style="width:100%">
+      <tr>
+        <td><p id="waterTemp"></p></td>
+        <td><iframe width="1200" height="200" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/298095/charts/1?bgcolor=%23eeeeee&color=%230000ff&results=200&dynamic=true&title=Water+Temperature&type=spline&xaxis=Time&yaxis=Water+Temperature+%28F%29&yaxismax=85&yaxismin=0&width=auto&height=auto"></iframe></td> 
+      </tr>
+      <tr>
+        <td><p id="conductivity"></p></td>
+        <td><iframe width="1200" height="200" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/298095/charts/2?bgcolor=%23eeeeee&color=%2300ff00&results=200&dynamic=true&title=Conductivity&type=line&xaxis=Time&yaxis=Conductivity+%28%CE%BCS%2Fm%29&yaxismax=1500&yaxismin=0&yaxismin=65&width=auto&height=auto"></iframe></td>
+      </tr>
+      <tr>
+        <td><p id="pH"></p></td>
+        <td><iframe width="1200" height="200" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/298095/charts/3?bgcolor=%23eeeeee&color=%23d62020&results=200&dynamic=true&title=pH&type=line&xaxis=Time&yaxis=pH&yaxismax=8&yaxismin=5&width=auto&height=auto&width=auto&height=auto"></iframe></td>
+      </tr>
+      <tr>
+        <td><p id="oxygen"></p></td>
+        <td><iframe width="1200" height="200" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/298095/charts/4?bgcolor=%23eeeeee&color=%2378121a&results=200&dynamic=true&title=Dissolved+Oxygen&type=line&xaxis=Time%60&yaxis=Dissolved+Oxygen+%28mg%2FL%29&yaxismax=20&yaxismin=0&width=auto&height=auto"></iframe></td>
+      </tr>
+      <tr>
+        <td><p id="airTemp"></p></td>
+        <td><iframe width="1200" height="200" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/298095/charts/5?bgcolor=%23eeeeee&color=%23123456&results=200&dynamic=true&title=Air+Temperature&type=line&xaxis=Time&yaxis=Air+Temperature+%28F%29&yaxismax=85&yaxismin=65&width=auto&height=auto"></iframe></td> 
+      </tr>
+      <tr>
+        <td><p id="humidity"></p></td>
+        <td><iframe width="1200" height="200" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/298095/charts/6?bgcolor=%23eeeeee&color=%23ff0099&results=200&dynamic=true&title=Humidity&type=line&xaxis=Time&yaxis=Humidity+%28%25%29&yaxismax=75&yaxismin=25&width=a
+        uto&height=auto"></iframe></td>
+      </tr>
+      <tr>
+        <td><p id="carbon"></p></td>
+        <td><iframe width="1200" height="200" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/298095/charts/7?bgcolor=%23eeeeee&color=%23ffffff&results=200&dynamic=true&title=Carbon+Dioxide&type=line&xaxis=Time&yaxis=Carbon+Dioxide&yaxismax=3000&yaxismin=0&width=auto&height=auto"></iframe></td>
+      </tr>
+      <tr>
+        <td><p id="par"></p></td>
+        <td><iframe width="1200" height="200" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/298095/charts/8?bgcolor=%23eeeeee&color=%23ffffff&results=200&dynamic=true&min=1&title=Photosynthetically+Active+Radiation&type=line&xaxis=Time&yaxis=PAR+Level+%28%C2%B5mol+%2Fm%5E2%2As%29&yaxismax=500&yaxismin=0&width=auto&height=auto"></iframe></td>
+      </tr>
+    </table>
+
+    <p id="timestamp"></p>
+    </body>
+</html>
