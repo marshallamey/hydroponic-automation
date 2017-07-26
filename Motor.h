@@ -15,12 +15,11 @@ class MOTOR {
     int fertB_pin = 33;
     int fertA_pin = 34;
     int pHdown_pin = 35;
-    int pHup_pin = 36;
-    //int waterValve_pin = 37; 
+    int pHup_pin = 36; 
     int reservoir_pin = 37; 
 
 //TIMING VARIABLES
-    long pumpRunTime = 2000;
+    long pumpRunTime = 3000;
     unsigned long currentMillis;
     unsigned long previousMillis;
 
@@ -50,8 +49,9 @@ MEMBER FUNCTIONS
       digitalWrite(fertB_pin, HIGH);
       digitalWrite(stonePump_pin, LOW);
       digitalWrite(waterPump_pin, LOW);
-      digitalWrite(lights_pin, LOW);
+      digitalWrite(lights_pin, HIGH);
       digitalWrite(reservoir_pin, HIGH);
+      
     }
 
 //RAISE WATER TEMPERATURE OF THE NUTRIENT SOLUTION
@@ -62,6 +62,9 @@ MEMBER FUNCTIONS
 
 //RAISE CONDUCTIVITY OF THE NUTRIENT SOLUTION
     void raiseConductivity() {
+      Serial.print("Current conductivity level: ");
+      //Serial.println(Sensors.getConductivity());
+      Serial.println("Adding Nutrient A");
       digitalWrite(fertA_pin, LOW);     
       currentMillis = millis();
       previousMillis = millis();
@@ -70,6 +73,8 @@ MEMBER FUNCTIONS
         currentMillis = millis();
       }
       digitalWrite(fertA_pin, HIGH);
+      delay(1000);
+      Serial.println("Adding Nutrient B");
       digitalWrite(fertB_pin, LOW);
       currentMillis = millis();
       previousMillis = millis();
@@ -77,40 +82,56 @@ MEMBER FUNCTIONS
       while (currentMillis - previousMillis < pumpRunTime) {
         currentMillis = millis();
       }   
-      digitalWrite(fertB_pin, HIGH);    
+      digitalWrite(fertB_pin, HIGH);
+      Serial.println("Completed");    
     }
 
 //LOWER CONDUCTIVITY OF THE NUTRIENT SOLUTION
-    //void lowerConductivity() {}
+  void lowerConductivity() {
+    Serial.print("Current conductivity level: ");
+    //Serial.println(Sensors.getConductivity());
+    Serial.print("Adding water..");
+    digitalWrite(reservoir_pin, LOW);     
+      currentMillis = millis();
+      previousMillis = millis();
+      
+      while (currentMillis - previousMillis < pumpRunTime) {
+        currentMillis = millis();
+      }
+    digitalWrite(reservoir_pin, HIGH);
+    Serial.println("Completed");
+    }
 
 //RAISE PH OF THE NUTRIENT SOLUTION
     void raisePH() {
-      digitalWrite(pHup_pin, LOW);
-      digitalWrite(stonePump_pin, LOW);
-      
+      Serial.print("Current pH level: ");
+      //Serial.println(Sensors.getPH());
+      Serial.println("Adding pH UP");
+      digitalWrite(pHup_pin, LOW);    
       currentMillis = millis();
       previousMillis = millis();
+      
       while (currentMillis - previousMillis < pumpRunTime) { 
         currentMillis = millis();
-      }
-    
+      }  
       digitalWrite(pHup_pin, HIGH);
-      digitalWrite(stonePump_pin, LOW);
+      Serial.println("Completed");
     }
 
 //LOWER PH OF THE NUTRIENT SOLUTION
     void lowerPH() {
-      digitalWrite(pHdown_pin, LOW);
-      digitalWrite(stonePump_pin, LOW);
-      
+      Serial.print("Current pH level: ");
+      //Serial.println(Sensors.getPH());
+      Serial.println("Adding pH DOWN...");
+      digitalWrite(pHdown_pin, LOW);      
       currentMillis = millis();
       previousMillis = millis();
+      
       while (currentMillis - previousMillis < pumpRunTime) { 
         currentMillis = millis();
-      }
-      
+      }     
       digitalWrite(pHdown_pin, HIGH);
-      digitalWrite(stonePump_pin, LOW);
+      Serial.println("Completed");
     }
 
 //RAISE OXYGEN LEVEL OF THE NUTRIENT SOLUTION
@@ -157,11 +178,11 @@ int getPHdown_pin(){
   return pHdown_pin; 
 }
 
-int getlights_pin(){
+int getLights_pin(){
   return lights_pin;
 }
     
-int getstonePump_pin(){
+int getStonePump_pin(){
   return stonePump_pin;
 }
     
