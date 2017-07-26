@@ -75,11 +75,10 @@ void setup() {
   Serial3.begin(9600);
   Serial4.begin(9600);
   Serial5.begin(9600);
-
   Motor.initializePins();
   dht.begin();
-  delay(1500);
-  manageLights();
+
+ 
   //Connect to WiFi
   while (status != WL_CONNECTED) {
     Serial.print("Attempting to connect to Wifi Network: ");
@@ -114,7 +113,9 @@ void setup() {
   printCurrentNet();
   printWifiData();
   delay(1500);
-  
+
+
+  //manageLights();
   Serial.println("Initializing data collection...");
   Serial.println();
   lcd.clear();
@@ -130,11 +131,13 @@ void loop() {
   
   if (currentMillis - previousMillis01 > readDataInterval) {
     previousMillis01 = currentMillis; 
+    //manageLights();
     readData();
     printToSerial();
-    printToInternet();
     //monitorSystem();
-    manageLights();
+    printToInternet();
+    
+    
   }  
 
   if (currentMillis - previousMillis02 > printDataInterval) {
@@ -157,13 +160,12 @@ void loop() {
     Sensor.getCommand();
     Serial.println("Sending command...");
     Serial.println();
-    
-    if      (whichSensorString == "WT") { Sensor.WTsendCommand(); }
-    else if (whichSensorString == "EC") { Sensor.ECsendCommand(); }
-    else if (whichSensorString == "PH") { Sensor.PHsendCommand(); }
-    else if (whichSensorString == "DO") { Sensor.DOsendCommand(); }  
-    
-      
+          
+    if      (whichSensorString == "WT" || whichSensorString == "wt") { Sensor.WTsendCommand(); }
+    else if (whichSensorString == "EC" || whichSensorString == "ec") { Sensor.ECsendCommand(); }
+    else if (whichSensorString == "PH" || whichSensorString == "ph") { Sensor.PHsendCommand(); }
+    else if (whichSensorString == "DO" || whichSensorString == "do") { Sensor.DOsendCommand(); }    
+    else    { Serial.println("Nothing was sent!  Try again."); }
   }
 
 
@@ -191,7 +193,7 @@ void loop() {
     float WT_low = 70.0;
     float EC_high = 2200;
     float EC_low = 1800;
-    float PH_high = 6.6;
+    float PH_high = 6.2;
     float PH_low = 5.8;
     float DO_high = 30;
     float DO_low = 12;  
@@ -210,8 +212,8 @@ void loop() {
     //if (Sensor.getWaterTemp() > WT_high) { Motor.lowerWaterTemp(); }
     //if (Sensor.getConductivity() < EC_low) { Motor.raiseConductivity(); }
     //if (Sensor.getConductivity() > EC_high) { Motor.lowerConductivity(); }  
-    //if (Sensor.getPH() < PH_low) { Motor.raisePH(); }
-    //if (Sensor.getPH() > PH_high) { Motor.lowerPH(); }  
+    if (Sensor.getPH() < PH_low) { Motor.raisePH(); }
+    if (Sensor.getPH() > PH_high) { Motor.lowerPH(); }  
     //if (Sensor.getOxygen() < DO_low) { Motor.raiseOxygenLevel(); }
     //if (Sensor.getOxygen() > DO_high) { Motor.lowerOxygenLevel(); }
     //if (Sensor.getHumidity() < HM_low) { Motor.raiseOxygenLevel(); }
@@ -231,7 +233,7 @@ void loop() {
   void manageLights(){
     DateTime now = rtc.now();  
     if (now.hour() >= lightOFF_hr && now.hour() < lightON_hr) { digitalWrite(Motor.getLights_pin(), HIGH); }   
-    else { digitalWrite(Motor.getLights_pin(), LOW); } 
+    else { digitalWrite(Motor.getLights_pin(), HIGH); } 
   }
 
 
