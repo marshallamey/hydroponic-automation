@@ -151,110 +151,147 @@ READ FUNCTIONS
 
 //READ DATA FROM WATER TEMPERATURE SENSOR (WT)
     float readWT() {
+      Serial.print("Reading WT... ");
+
+      //Send command for single reading
       Serial1.print('R');
       Serial1.print('\r');
 
+      //Get reading
       String WTreadString = Serial1.readStringUntil(13);
       waterTemp = WTreadString.toFloat();
-      waterTemp = waterTemp*1.8 + 32;
       WTreadString = "";
-      WTreadString = Serial1.readStringUntil(13);
-      
-      //prints *OK if read. prints *ER if error
-      Serial.print("Reading WT: ");
-      Serial.println(WTreadString);
-      WTreadString = "";
+           
+      //Get response. Prints *OK if read.
+      WTreadString = Serial1.readStringUntil(13);      
+      if (WTreadString != "*OK"){ Serial.println("Failed to read water temperature!"); }
+      else{ Serial.println(WTreadString); }
+      WTreadString = ""; 
+         
       return waterTemp;
     }
 
 //READ DATA FROM CONDUCTIVITY SENSOR (EC)
     float readEC(){
       Serial.print("Reading EC... ");
-      float intercept = 0;
-      float slope = 960;
-    
-      float count = analogRead(A0);
-      float voltage = count / 1023 * 5.0;
-      conductivity = intercept + voltage * slope; 
-      /*Serial2.print('R');
+
+      //Send command for single reading
+      Serial2.print('R');
       Serial2.print('\r');
-      
+
+      //Get reading
       String ECreadString = Serial2.readStringUntil(13);
       conductivity = ECreadString.toFloat();
+      conductivity += conductivity * .208;
       ECreadString = "";
-      ECreadString = Serial2.readStringUntil(13); 
-      
-      //prints *OK if read. prints *ER if error
-      Serial.print("Reading EC:  ");
-      Serial.println(ECreadString);
 
-      ECreadString = "";  */    
+      //prints *OK if read.
+      ECreadString = Serial2.readStringUntil(13);          
+      if (ECreadString != "*OK"){ Serial.println("Failed to read conductivity!"); }
+      else{ Serial.println(ECreadString); }
+      ECreadString = "";   
+      
       return conductivity;
     }
 
 //READ DATA FROM PH SENSOR (PH)
     float readPH() {   
+      Serial.print("Reading PH... ");
+      
+      /*//Send command for single reading
       Serial3.print('R');
       Serial3.print('\r');
-      
+
+      //Get reading
       String PHreadString = Serial3.readStringUntil(13);
       pH = PHreadString.toFloat();
       PHreadString = "";
+           
+      //prints *OK if read
       PHreadString = Serial3.readStringUntil(13);
+      if (PHreadString != "*OK"){ Serial.println("Failed to read pH level!"); }
+      else{ Serial.println(PHreadString); }
+      PHreadString = "";*/
+
+      float intercept = 13.720;
+      float slope = -3.838;
+
+      //Analog reading is currently twice what it should be.  If this changes, remove division by 2
+      float count = analogRead(A0) / 2;
+      float voltage = count / 1023 * 5.0;
       
-      //prints *OK if read. prints *ER if error
-      Serial.print("Reading PH:  ");
-      Serial.println(PHreadString);
-      PHreadString = "";
+      pH = intercept + voltage * slope;
+
+      if (isnan(par))  { Serial.println("Failed to read PH level!"); }
+      else             { Serial.println("*OK"); }
+
+      //Troubleshooting pH calibration.  Uncomment to view voltage readings
+      //Serial.print("Analog Value: ");
+      //Serial.println(count);
+      //Serial.print("Voltage: ");
+      //Serial.println(voltage);
+      //Serial.print("pH: ");
+      //Serial.println(pH);
+      
       return pH;
     }
 
 //READ DATA FROM DISSOLVED OXYGEN SENSOR (DO)
     float readDO() {
+      //Activate software serial port 4
       Serial4.listen();
+      Serial.print("Reading DO... ");
+
+      //Send command for single reading
       Serial4.print('R');
       Serial4.print('\r');
-    
+
+      //Get reading
       String DOreadString = Serial4.readStringUntil(13);
       oxygen = DOreadString.toFloat();
       DOreadString = "";   
-      DOreadString = Serial4.readStringUntil(13);
 
-      //prints *OK if read. prints *ER if error
-      Serial.print("Reading DO:  ");
-      Serial.println(DOreadString);
+      //prints *OK if read.
+      DOreadString = Serial4.readStringUntil(13);
+      if (DOreadString != "*OK"){ Serial.println("Failed to read dissolved oxygen!"); }
+      else{ Serial.println(DOreadString); }
       DOreadString = "";
+      
       return oxygen;
     }
 
 //READ DATA FROM HUMIDITY SENSOR (HM)
     float readHM() {
+      Serial.print("Reading HM... ");
       humidity = dht.readHumidity();
       if (isnan(humidity)) {
         Serial.println("Failed to read humidity!");
       }
       else{
-        Serial.println("Reading HM... ");
+        Serial.println("*OK");
       }
       return humidity;
     }
 
 //READ DATA FROM AIR TEMPERATURE SENSOR (AT)
     float readAT() {
+      Serial.print("Reading AT... ");
       airTemp = dht.readTemperature(true);
       if (isnan(airTemp)) {
         Serial.println("Failed to read air temperature!");
       }
       else{
-        Serial.println("Reading AT... ");
+        Serial.println("*OK");
       }
       return airTemp;
     }
  
 //READ DATA FROM CARBON DIOXIDE SENSOR (CB)
     long readCB() {
-      Serial.println("Reading CB... ");
+      //Activate software serial port 5
       Serial5.listen();
+      Serial.print("Reading CB... ");
+      
       Serial5.write(hexdata,9);
       delay(500);
 
@@ -271,21 +308,40 @@ READ FUNCTIONS
           }
         }       
       } 
+      if (isnan(carbon)) { Serial.println("Failed to read carbon dioxide!"); }
+      else               { Serial.println("*OK"); }
+      
       return carbon;  
     } 
 
 //READ DATA FROM FLOW RATE SENSOR (PR)
-  float readPR(){   
-    return par;
-  }
+    float readPR(){
+      Serial.print("Reading PR... ");   
+      /*float intercept = 0;
+      float slope = 430;
+    
+      float count = analogRead(A0);
+      float voltage = count / 1023 * 5.0;
+      par = intercept + voltage * slope;*/
+
+      if (par==0)  { Serial.println("Failed to read PAR level!"); }
+      else             { Serial.println("*OK"); }
+      
+      return par;
+    }
 
 //READ DATA FROM WATER LEVEL SENSOR (WL)
-  float readWL(){ 
-    waterLevel = analogRead(SENSORPIN);
-    waterLevel = (1023 / waterLevel) - 1;
-    waterLevel = SERIESRESISTOR / waterLevel;
-    return waterLevel;
-  }
+    float readWL(){ 
+      Serial.print("Reading WL... ");
+      waterLevel = analogRead(SENSORPIN);
+      waterLevel = (1023 / waterLevel) - 1;
+      waterLevel = SERIESRESISTOR / waterLevel;
+      
+      if (isnan(waterLevel))  { Serial.println("Failed to read water level!"); }
+      else                    { Serial.println("*OK"); }
+      
+      return waterLevel;
+    }
    
 /********************************************************************************************
 PRINT FUNCTIONS
@@ -296,7 +352,7 @@ PRINT FUNCTIONS
       Serial.print("Water Temperature: ");
       Serial.print("\t");
       Serial.print(waterTemp);
-      Serial.println(" *F");
+      Serial.println(" F");
     }
 
 //PRINT EC DATA TO SERIAL MONITOR
@@ -304,7 +360,7 @@ PRINT FUNCTIONS
       Serial.print("Conductivity: ");
       Serial.print("\t\t");
       Serial.print(conductivity);
-      Serial.println(" (micro)S");
+      Serial.println(" microSiemens/cm");
     }
 
 //PRINT PH DATA TO SERIAL MONITOR
@@ -335,7 +391,7 @@ PRINT FUNCTIONS
       Serial.print("Air Temperature: ");
       Serial.print("\t");
       Serial.print(airTemp);
-      Serial.println(" *F");
+      Serial.println(" F");
     }
 
 //PRINT CB DATA TO SERIAL MONITOR
@@ -343,15 +399,15 @@ PRINT FUNCTIONS
       Serial.print("CO2 Concentration: ");
       Serial.print("\t");
       Serial.print(carbon);
-      Serial.println("ppm"); 
+      Serial.println(" ppm"); 
     }
 
 //PRINT PR DATA TO SERIAL MONITOR
     void printPR() {
       Serial.print("PAR Level: ");
-      Serial.print("\t");
+      Serial.print("\t\t");
       Serial.print(par);
-      Serial.println("micromoles/m*s"); 
+      Serial.println(" micromoles/m*s"); 
     }
 
 //PRINT WL DATA TO SERIAL MONITOR
