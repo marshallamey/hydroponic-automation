@@ -10,57 +10,48 @@ Make sure to use Carriage Return only
 Baud rate is 9600 bps
 */
 
-
 //LIBRARIES
-//#include <ArduinoUnit.h>
-#include <SoftwareSerial.h>  
-#include <SPI.h>
-#include <WiFi101.h>         
-#include <Adafruit_RGBLCDShield.h>
-#include "ThingSpeak.h"
-#include "Sensor.h"
-#include "Motor.h"
-//#include "Menu.h"
-#include "DHT.h"  
-#include <Wire.h>
-//https://github.com/adafruit/RTClib
-#include "RTClib.h"
-
+  #include <SoftwareSerial.h>  
+  #include <SPI.h>
+  #include <Wire.h>
+  #include <WiFi101.h>         
+  #include <Adafruit_RGBLCDShield.h>
+  #include "ThingSpeak.h"
+  #include "DHT.h"  
+  #include "RTClib.h"
+  #include "Sensor.h"
+  #include "Motor.h"
+  //#include "Menu.h"
 
 // TIMING VARIABLES
-
-int lightON_hr = 23;
-int lightOFF_hr = 15;
-long readDataInterval = 30000;
-long printDataInterval = 5000;
-unsigned long currentMillis;
-unsigned long previousMillis01 = 0;
-unsigned long previousMillis02 = 0;
+  unsigned long currentMillis;
+  unsigned long previousMillis01 = 0;
+  unsigned long previousMillis02 = 0;
+  long readDataInterval = 30000;        //30 seconds
+  long printDataInterval = 5000;        //5 seconds
+  int lightON_hr = 23;                  //2300 hours (11:00pm)
+  int lightOFF_hr = 15;                 //1500 hours (3:00pm)
+  int lcdPageNumber = 0;
 
 //WIFI VARIABLES  
-char ssid[] = "CoC Student Center";    //  your network SSID (name) 
-char pass[] = "sanantonio210";   // your network password
-int status = WL_IDLE_STATUS;
-
-char thingSpeakAddress[] = "api.thingspeak.com";
-unsigned long myChannelNumber = 298095;
-String myWriteAPIKey = "F8Q6F3XFDI3QDLUY";
-
+  char ssid[] = "CoC Student Center";    //  your network SSID (name) 
+  char pass[] = "sanantonio210";   // your network password
+  int status = WL_IDLE_STATUS;
+  char thingSpeakAddress[] = "api.thingspeak.com";
+  unsigned long myChannelNumber = 298095;
+  String myWriteAPIKey = "F8Q6F3XFDI3QDLUY";
 
 //INITIALIZERS
-int lcdPageNumber = 0;
-SENSOR Sensor;
-MOTOR Motor;
-Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
-WiFiServer server(80);
-WiFiClient client;
-RTC_PCF8523 rtc;
-
+  SENSOR Sensor;
+  MOTOR Motor;
+  Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
+  WiFiServer server(80);
+  WiFiClient client;
+  RTC_PCF8523 rtc;
 
 /*************************************************************************************
-SETUP AND LOOP FUNCTIONS
+                              SETUP AND LOOP FUNCTIONS
 *************************************************************************************/
-
 
 void setup() {
   lcd.begin(16,2);
@@ -69,6 +60,7 @@ void setup() {
   lcd.print("   HYDROPONIC   ");
   lcd.setCursor(0,1);
   lcd.print("   SYSTEM  ON   ");
+  
   Serial.begin(9600);
   Serial1.begin(9600);
   Serial2.begin(9600);
@@ -77,7 +69,6 @@ void setup() {
   Serial5.begin(9600);
   Motor.initializePins();
   dht.begin();
-
  
   //Connect to WiFi
   while (status != WL_CONNECTED) {
@@ -89,15 +80,20 @@ void setup() {
     lcd.setCursor(0,1);
     lcd.print("      WIFI      ");
     status = WiFi.begin(ssid, pass);
-    delay(7000);   // WAIT FOR CONNECTION
-  }
+    delay(5000);   // WAIT FOR CONNECTION
+  }  
+  Serial.println("You're connected to the network");
+  lcd.clear();
+  lcd.print(" WIFI CONNECTED ");
+  printCurrentNet();
+  printWifiData();
+  delay(1500);
 
-  //CHECK TO MAKE SURE CLOCK IS INITIALIZED
+  //Check to make sure clock is initialized
   if (! rtc.begin()) {
     Serial.println("Couldn't find RTC");
     while (1);
   }
-  
   if (! rtc.initialized()) {
     Serial.println("RTC is NOT running!");
     // following line sets the RTC to the date & time this sketch was compiled
@@ -106,16 +102,8 @@ void setup() {
     // January 21, 2014 at 3am you would call:
     // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
   }
-
-  Serial.println("You're connected to the network");
-  lcd.clear();
-  lcd.print(" WIFI CONNECTED ");
-  printCurrentNet();
-  printWifiData();
-  delay(1500);
-
-
-  //manageLights();
+  
+  //Take initial data reading
   Serial.println("Initializing data collection...");
   Serial.println();
   lcd.clear();
@@ -131,26 +119,23 @@ void loop() {
   
   if (currentMillis - previousMillis01 > readDataInterval) {
     previousMillis01 = currentMillis; 
-    //manageLights();
+    
     readData();
     printToSerial();
-    //monitorSystem();
-    printToInternet();
-    
-    
+    printToInternet(); 
+    //monitorSystem();      
   }  
 
   if (currentMillis - previousMillis02 > printDataInterval) {
     previousMillis02 = currentMillis; 
+    
     printToLCD();
   }  
 }
 
-
 /************************************************************************************************************
                                           MEMBER FUNCTIONS
 ************************************************************************************************************/
-
 
 //SEND A COMMAND TO AN ATLAS SCIENTIFIC SENSOR
   void sendSensorCommand() {
@@ -168,7 +153,6 @@ void loop() {
     else    { Serial.println("Nothing was sent!  Try again."); }
   }
 
-
 //READ DATA FROM ALL SENSORS
   void readData() {
     Serial.println("Reading sensors... ");
@@ -185,8 +169,7 @@ void loop() {
     Serial.println();
   }
 
-
-//MONITOR PARAMETERS OF SOLUTION
+//MONITOR PARAMETERS OF SYSTEM
   void monitorSystem() {
     //**VARIABLE PARAMETERS CAN BE CHANGED HERE**//
     float WT_high = 80.0;
@@ -228,7 +211,6 @@ void loop() {
     //if (Sensor.getWaterLevel() > WL_high) { Motor.lowerFlowRate(); }
   }
 
-
 //TURN LIGHTS ON AND OFF
   void manageLights(){
     DateTime now = rtc.now();  
@@ -236,11 +218,9 @@ void loop() {
     else { digitalWrite(Motor.getLights_pin(), HIGH); } 
   }
 
-
 /******************************************************************************************************************
                                                   PRINT FUNCTIONS
 ******************************************************************************************************************/
-
 
 //PRINT SSID OF NETWORK CONNECTED TO
   void printCurrentNet() {
@@ -248,14 +228,12 @@ void loop() {
     Serial.println(WiFi.SSID());
   }
 
-
 //PRINT WIFI SHIELD'S IP ADDRESS
   void printWifiData() {  
     IPAddress ip = WiFi.localIP();
     Serial.print("IP Address: ");
     Serial.println(ip);
   }
-
 
 //PRINT DATA TO SERIAL MONITOR
   void printToSerial(){
@@ -271,7 +249,6 @@ void loop() {
     //Sensor.printWL();
     Serial.println();
   }
-
 
 //PRINT TIME TO SERIAL MONITOR
   void printTime(){
@@ -291,6 +268,7 @@ void loop() {
       Serial.print(now.hour(), DEC);
     }
     Serial.print(':');
+    
     if (now.minute() < 10){
       Serial.print("0");
       Serial.print(now.minute(), DEC);
@@ -299,6 +277,7 @@ void loop() {
       Serial.print(now.minute(), DEC);
     }
     Serial.print(':');
+    
     if (now.second() < 10){
       Serial.print("0");
       Serial.print(now.second(), DEC);
@@ -308,7 +287,6 @@ void loop() {
     }
     Serial.println();
   }
-
 
 //PRINT DATA TO INTERNET
   void printToInternet() {
@@ -334,6 +312,7 @@ void loop() {
         Serial.println();
         client.stop();
       }
+    
       else {
         // if you couldn't make a connection:
         Serial.println("Connection to ThingSpeak failed! System reset in progress...");
@@ -348,7 +327,6 @@ void loop() {
       }
     }
 
-
 //PRINT DATA TO LCD DISPLAY IN TWO SEPARATE PAGES
   void printToLCD() {
     if (lcdPageNumber == 0) {
@@ -360,7 +338,6 @@ void loop() {
       lcdPageNumber = 0;
     }
   }
-
 
 //PRINT FIRST PAGE TO LCD
   void printPageNumber0() {
@@ -384,7 +361,6 @@ void loop() {
     lcd.print("");
   }
 
-
 //PRINT SECOND PAGE TO LCD
   void printPageNumber1() {
     int atemp = Sensor.getAirTemp();
@@ -406,5 +382,3 @@ void loop() {
     lcd.print(Sensor.getPar());
     lcd.print("");
   }
-
-
