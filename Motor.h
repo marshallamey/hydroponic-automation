@@ -47,8 +47,8 @@ MEMBER FUNCTIONS
       digitalWrite(pHdown_pin, HIGH);
       digitalWrite(fertA_pin, HIGH);
       digitalWrite(fertB_pin, HIGH);
-      digitalWrite(stonePump_pin, LOW);
-      digitalWrite(waterPump_pin, LOW);
+      digitalWrite(stonePump_pin, HIGH);
+      digitalWrite(waterPump_pin, HIGH);
       digitalWrite(lights_pin, HIGH);
       digitalWrite(reservoir_pin, HIGH);
       
@@ -83,7 +83,9 @@ MEMBER FUNCTIONS
         currentMillis = millis();
       }   
       digitalWrite(fertB_pin, HIGH);
-      Serial.println("Completed");    
+      delay(1000);
+      Serial.println("Completed");
+         
     }
 
 //LOWER CONDUCTIVITY OF THE NUTRIENT SOLUTION
