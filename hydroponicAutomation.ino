@@ -1,4 +1,4 @@
-/*
+/*********************************************************************************************************
 This is a program to automate and control the parameters of a hydroponic garden.
 Code was designed to be run with an Arduino Mega 2560
 The project was completed by research students at San Antonio College
@@ -8,57 +8,35 @@ For commands, please refer to Atlas Scientific Datasheet in the GitHub Repositor
 DIRECTIONS: Type the pointer using the serial monitor and press enter.  Type your command and press enter.
 Make sure to use Carriage Return only
 Baud rate is 9600 bps
-*/
-
+*********************************************************************************************************/
 
 //LIBRARIES
-//#include <ArduinoUnit.h>
-#include <SoftwareSerial.h>  
-#include <SPI.h>
-#include <WiFi101.h>         
-#include <Adafruit_RGBLCDShield.h>
-#include "ThingSpeak.h"
-#include "Sensor.h"
-#include "Motor.h"
-//#include "Menu.h"
-#include "DHT.h"  
-#include <Wire.h>
-//https://github.com/adafruit/RTClib
-#include "RTClib.h"
+  #include <SoftwareSerial.h>  
+  #include <SPI.h>       
+  #include <Adafruit_RGBLCDShield.h>
+  #include <Wire.h>
+  #include "RTClib.h"
+  #include "DHT.h"  
+  #include "Sensor.h"
+  #include "Motor.h"
 
-
-// TIMING VARIABLES
-
-int lightON_hr = 23;
-int lightOFF_hr = 15;
-long readDataInterval = 30000;
-long printDataInterval = 5000;
-unsigned long currentMillis;
-unsigned long previousMillis01 = 0;
-unsigned long previousMillis02 = 0;
-
-//WIFI VARIABLES  
-char ssid[] = "CoC Student Center";    //  your network SSID (name) 
-char pass[] = "sanantonio210";   // your network password
-int status = WL_IDLE_STATUS;
-
-char thingSpeakAddress[] = "api.thingspeak.com";
-unsigned long myChannelNumber = 298095;
-String myWriteAPIKey = "F8Q6F3XFDI3QDLUY";
-
+//TIMING VARIABLES
+  unsigned long currentMillis;
+  unsigned long previousMillis01 = 0;
+  unsigned long previousMillis02 = 0;
+  long readDataInterval = 30000;        //Read data every 30 seconds
+  long printDataInterval = 5000;        //Change LCD display every 5 seconds
+  int lcdPageNumber = 0;
 
 //INITIALIZERS
-int lcdPageNumber = 0;
-SENSOR Sensor;
-MOTOR Motor;
-Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
-WiFiServer server(80);
-WiFiClient client;
-RTC_PCF8523 rtc;
+  SENSOR Sensor;
+  MOTOR Motor;
+  Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
+  RTC_PCF8523 rtc;
 
 
 /*************************************************************************************
-SETUP AND LOOP FUNCTIONS
+                               SETUP AND LOOP FUNCTIONS
 *************************************************************************************/
 
 
@@ -76,10 +54,8 @@ void setup() {
   Serial4.begin(9600);
   Serial5.begin(9600);
   Serial6.begin(9600);
-  
-  Motor.initializePins();
   dht.begin();
-  delay(1500);
+  Motor.begin();
 
   //CHECK TO MAKE SURE CLOCK IS INITIALIZED
   if (! rtc.begin()) {
@@ -91,11 +67,7 @@ void setup() {
     Serial.println("RTC is NOT running!");
     // following line sets the RTC to the date & time this sketch was compiled
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-    // This line sets the RTC with an explicit date & time, for example to set
-    // January 21, 2014 at 3am you would call:
-    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
   }
-
   
   Serial.println("Initializing data collection...");
   Serial.println();
@@ -108,44 +80,44 @@ void setup() {
 void loop() {
   currentMillis = millis();
 
-  if (Serial.available() > 0) { sendSensorCommand(); } 
+  if (Serial.available() > 0) { 
+    sendSensorCommand(); 
+  } 
   
   if (currentMillis - previousMillis01 > readDataInterval) {
     previousMillis01 = currentMillis; 
     readData();
+    printToSerial();
     printToInternet();
-    //monitorSystem();
-
+    monitorSystem();
   }  
 
-  if (currentMillis - previousMillis02 > printDataInterval) {
+  if (currentMillis - previousMillis02 > printDataInterval) {  
     previousMillis02 = currentMillis; 
     printToLCD();
   }  
 }
 
 
-/************************************************************************************************************
-                                          MEMBER FUNCTIONS
-************************************************************************************************************/
+/*****************************************************************************************
+                                   MAIN FUNCTIONS
+*****************************************************************************************/
 
 
 //SEND A COMMAND TO AN ATLAS SCIENTIFIC SENSOR
   void sendSensorCommand() {
-    String whichSensorString = Serial.readStringUntil(13);
+    String sensorAddress = Serial.readStringUntil(13);
     Serial.print("Connecting to: ");
-    Serial.println(whichSensorString);
+    Serial.println(sensorAddress);
     Sensor.getCommand();
     Serial.println("Sending command");
     Serial.println();
     
-     if      (whichSensorString == "WT" || whichSensorString == "wt") { Sensor.WTsendCommand(); }
-     else if (whichSensorString == "EC" || whichSensorString == "ec") { Sensor.ECsendCommand(); }
-     else if (whichSensorString == "PH" || whichSensorString == "ph") { Sensor.PHsendCommand(); }
-     else if (whichSensorString == "DO" || whichSensorString == "do") { Sensor.DOsendCommand(); }    
-     else    { Serial.println("Nothing was sent!  Try again."); } 
-    
-      
+     if      (sensorAddress == "WT" || sensorAddress == "wt") { Sensor.WTsendCommand(); }
+     else if (sensorAddress == "EC" || sensorAddress == "ec") { Sensor.ECsendCommand(); }
+     else if (sensorAddress == "PH" || sensorAddress == "ph") { Sensor.PHsendCommand(); }
+     else if (sensorAddress == "DO" || sensorAddress == "do") { Sensor.DOsendCommand(); }    
+     else    { Serial.println("Nothing was sent!  Try again."); }      
   }
 
 
@@ -160,7 +132,6 @@ void loop() {
     Sensor.readAT();
     Sensor.readCB();
     Sensor.readPR();
-    //Sensor.readWL();
     Serial.println("Reading Complete.");
     Serial.println();
   }
@@ -168,6 +139,7 @@ void loop() {
 
 //MONITOR PARAMETERS OF SOLUTION
   void monitorSystem() {
+    
     //**VARIABLE PARAMETERS CAN BE CHANGED HERE**//
     float WT_high = 80.0;
     float WT_low = 70.0;
@@ -185,15 +157,37 @@ void loop() {
     float CB_low;
     float PR_high;
     float PR_low;
-    float WL_high;
-    float WL_low;
-   
+    int lightON_hr = 23;                  //2300 hours (11:00pm)
+    int lightOFF_hr = 15;                 //1500 hours (3:00pm)   
+
+    //TURN LIGHTS ON AND OFF
+    DateTime now = rtc.now();
+    if (now.hour() >= lightOFF_hr && now.hour() < lightON_hr) { digitalWrite(Motor.getLights_pin(), HIGH); }   
+    else { digitalWrite(Motor.getLights_pin(), LOW); } 
+
+    //PARAMETER CONTROL STATEMENTS
     //if (Sensor.getWaterTemp() < WT_low) { Motor.raiseWaterTemp(); }
     //if (Sensor.getWaterTemp() > WT_high) { Motor.lowerWaterTemp(); }
-    //if (Sensor.getConductivity() < EC_low) { Motor.raiseConductivity(); }
-    //if (Sensor.getConductivity() > EC_high) { Motor.lowerConductivity(); }  
-    //if (Sensor.getPH() < PH_low) { Motor.raisePH(); }
-    //if (Sensor.getPH() > PH_high) { Motor.lowerPH(); }  
+    if (Sensor.getConductivity() < EC_low) { 
+      Serial.print("LOW conductivity level: ");
+      Serial.println(Sensor.getConductivity());
+      Motor.raiseConductivity(); 
+    }   
+    if (Sensor.getConductivity() > EC_high) { 
+      Serial.print("HIGH conductivity level: ");
+      Serial.println(Sensor.getConductivity());
+      Motor.lowerConductivity(); 
+    }  
+    if (Sensor.getPH() < PH_low) { 
+      Serial.print("LOW pH level: ");
+      Serial.println(Sensor.getPH());
+      Motor.raisePH(); 
+    }
+    if (Sensor.getPH() > PH_high) { 
+      Serial.print("HIGH pH level: ");
+      Serial.println(Sensor.getPH());
+      Motor.lowerPH(); 
+    }  
     //if (Sensor.getOxygen() < DO_low) { Motor.raiseOxygenLevel(); }
     //if (Sensor.getOxygen() > DO_high) { Motor.lowerOxygenLevel(); }
     //if (Sensor.getHumidity() < HM_low) { Motor.raiseOxygenLevel(); }
@@ -203,38 +197,13 @@ void loop() {
     //if (Sensor.getCarbon() < CB_low) { Motor.raiseCarbon(); }
     //if (Sensor.getCarbon() > CB_high) { Motor.lowerCarbon(); }
     //if (Sensor.getPar() < FR_low) { Motor.raiseFlowRate(); }
-    //if (Sensor.getPar() > FR_high) { Motor.lowerFlowRate(); }
-    //if (Sensor.getWaterLevel() < WL_low) { Motor.raiseFlowRate(); }
-    //if (Sensor.getWaterLevel() > WL_high) { Motor.lowerFlowRate(); }
+    //if (Sensor.getPar() > FR_high) { Motor.lowerFlowRate(); }  
   }
 
 
-//TURN LIGHTS ON AND OFF
-  void manageLights(){
-    DateTime now = rtc.now();  
-    if (now.hour() >= lightOFF_hr && now.hour() < lightON_hr) { digitalWrite(Motor.getLights_pin(), HIGH); }   
-    else { digitalWrite(Motor.getLights_pin(), LOW); } 
-  }
-
-
-/******************************************************************************************************************
-                                                  PRINT FUNCTIONS
-******************************************************************************************************************/
-
-
-//PRINT SSID OF NETWORK CONNECTED TO
-  void printCurrentNet() {
-    Serial.print("SSID: ");
-    Serial.println(WiFi.SSID());
-  }
-
-
-//PRINT WIFI SHIELD'S IP ADDRESS
-  void printWifiData() {  
-    IPAddress ip = WiFi.localIP();
-    Serial.print("IP Address: ");
-    Serial.println(ip);
-  }
+/*******************************************************************************************************
+                                          PRINT FUNCTIONS
+********************************************************************************************************/
 
 
 //PRINT DATA TO SERIAL MONITOR
@@ -248,8 +217,22 @@ void loop() {
     Sensor.printAT();
     Sensor.printCB();
     Sensor.printPR();
-    //Sensor.printWL();
     Serial.println();
+  }
+
+
+//PRINT DATA TO INTERNET
+  void printToInternet() {
+    Serial6.listen();
+    Serial.print("Sending data to Photon at ");
+    printTime();
+    
+    String Readings = "field1=" + String(Sensor.getWaterTemp()) + " & field2=" + String(Sensor.getConductivity()) 
+    + " & field3=" + String(Sensor.getPH()) + " & field4=" + String(Sensor.getOxygen())
+    + " & field5=" + String(Sensor.getAirTemp()) + " & field6=" + String(Sensor.getHumidity())
+    + " & field7=" + String(Sensor.getCarbon()) + " & field8=" + String(Sensor.getPar());
+    
+    Serial6.print(Readings);
   }
 
 
@@ -263,45 +246,25 @@ void loop() {
     Serial.print(now.year(), DEC);
     Serial.print(" ");
     
-    if (now.hour() < 10){
+    if (now.hour() < 10) {
       Serial.print("0");
-      Serial.print(now.hour(), DEC);
-    }
-    else{
-      Serial.print(now.hour(), DEC);
-    }
+      Serial.print(now.hour(), DEC); }
+    else { Serial.print(now.hour(), DEC); }
+    
     Serial.print(':');
-    if (now.minute() < 10){
+    
+    if (now.minute() < 10) {
       Serial.print("0");
-      Serial.print(now.minute(), DEC);
-    }
-    else{
-      Serial.print(now.minute(), DEC);
-    }
+      Serial.print(now.minute(), DEC); }
+    else { Serial.print(now.minute(), DEC); }
+    
     Serial.print(':');
-    if (now.second() < 10){
+    
+    if (now.second() < 10) {
       Serial.print("0");
-      Serial.print(now.second(), DEC);
-    }
-    else{
-      Serial.print(now.second(), DEC);
-    }
+      Serial.print(now.second(), DEC); }
+    else { Serial.print(now.second(), DEC); }
     Serial.println();
-  }
-
-
-//PRINT DATA TO INTERNET
-  void printToInternet() {
-    Serial6.listen();
-    Serial.print("Sending data to Photon at ");
-    printTime();
-    
-      String Readings = "field1=" + String(Sensor.getWaterTemp()) + " & field2=" + String(Sensor.getConductivity()) 
-    + " & field3=" + String(Sensor.getPH()) + " & field4=" + String(Sensor.getOxygen())
-    + " & field5=" + String(Sensor.getAirTemp()) + " & field6=" + String(Sensor.getHumidity())
-    + " & field7=" + String(Sensor.getCarbon()) + " & field8=" + String(Sensor.getPar());
-    
-    Serial6.print(Readings);
   }
 
 
