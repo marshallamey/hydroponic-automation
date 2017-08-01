@@ -80,26 +80,13 @@ void setup() {
   Motor.initializePins();
   dht.begin();
   delay(1500);
-  manageLights();
-  //Connect to WiFi
-//  while (status != WL_CONNECTED) {
-//    Serial.print("Attempting to connect to Wifi Network: ");
-//    Serial.println(ssid);
-//    lcd.clear();
-//    lcd.setCursor(0,0);
-//    lcd.print(" CONNECTING TO  ");
-//    lcd.setCursor(0,1);
-//    lcd.print("      WIFI      ");
-//    status = WiFi.begin(ssid, pass);
-//    delay(7000);   // WAIT FOR CONNECTION
-//  }
 
   //CHECK TO MAKE SURE CLOCK IS INITIALIZED
   if (! rtc.begin()) {
     Serial.println("Couldn't find RTC");
     while (1);
   }
-  
+
   if (! rtc.initialized()) {
     Serial.println("RTC is NOT running!");
     // following line sets the RTC to the date & time this sketch was compiled
@@ -109,12 +96,6 @@ void setup() {
     // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
   }
 
-//  Serial.println("You're connected to the network");
-//  lcd.clear();
-//  lcd.print(" WIFI CONNECTED ");
-//  printCurrentNet();
-//  printWifiData();
-//  delay(1500);
   
   Serial.println("Initializing data collection...");
   Serial.println();
@@ -134,7 +115,7 @@ void loop() {
     readData();
     printToInternet();
     //monitorSystem();
-    manageLights();
+
   }  
 
   if (currentMillis - previousMillis02 > printDataInterval) {
@@ -155,13 +136,16 @@ void loop() {
     Serial.print("Connecting to: ");
     Serial.println(whichSensorString);
     Sensor.getCommand();
+    Serial.println("Sending command");
+    Serial.println();
     
-    if      (whichSensorString == "WT") { Sensor.WTsendCommand(); }
-    else if (whichSensorString == "EC") { Sensor.ECsendCommand(); }
-    else if (whichSensorString == "PH") { Sensor.PHsendCommand(); }
-    else if (whichSensorString == "DO") { Sensor.DOsendCommand(); }  
+     if      (whichSensorString == "WT" || whichSensorString == "wt") { Sensor.WTsendCommand(); }
+     else if (whichSensorString == "EC" || whichSensorString == "ec") { Sensor.ECsendCommand(); }
+     else if (whichSensorString == "PH" || whichSensorString == "ph") { Sensor.PHsendCommand(); }
+     else if (whichSensorString == "DO" || whichSensorString == "do") { Sensor.DOsendCommand(); }    
+     else    { Serial.println("Nothing was sent!  Try again."); } 
     
-    Serial.println("Sending command");  
+      
   }
 
 
@@ -308,44 +292,17 @@ void loop() {
 
 //PRINT DATA TO INTERNET
   void printToInternet() {
-    Serial.println("Sending data to Photon...");
-      String Readings = "field1= " + String(Sensor.getWaterTemp()) + "&field2= " + String(Sensor.getConductivity()) 
-    + "&field3= " + String(Sensor.getPH()) + "&field4= " + String(Sensor.getOxygen())
-    + "&field5= " + String(Sensor.getAirTemp()) + "&field6= " + String(Sensor.getHumidity())
-    + "&field7= " + String(Sensor.getCarbon()) + "&field8= " + String(Sensor.getPar());
-
-    //Serial6.print("incoming");
-    Serial6.println(Readings);
-      
-//      if (client.connect(thingSpeakAddress, 80)) {
-//        client.print("POST /update HTTP/1.1\n");
-//        client.print("Host: api.thingspeak.com\n");
-//        client.print("Connection: close\n");
-//        client.print("X-THINGSPEAKAPIKEY: " + myWriteAPIKey + "\n");
-//        client.print("Content-Type: application/x-www-form-urlencoded\n");
-//        client.print("Content-Length: ");
-//        client.print(Readings.length());
-//        client.print("\n\n");
-//        client.print(Readings);
-//        //lastConnectionTime = millis();
-//        Serial.print("Updated ThingSpeak at ");
-//        printTime();
-//        Serial.println();
-//        client.stop();
-//      }
-//      else {
-//        // if you couldn't make a connection:
-//        Serial.println("Connection to ThingSpeak failed! System reset in progress...");
-//        Serial.println();
-//        lcd.clear();
-//        lcd.setCursor(0, 0);
-//        lcd.print("   RESETTING    ");
-//        lcd.setCursor(0, 1);
-//        lcd.print("     SYSTEM     ");
-//        delay(1500);
-//        asm volatile ("  jmp 0");
-//      }
-    }
+    Serial6.listen();
+    Serial.print("Sending data to Photon at ");
+    printTime();
+    
+      String Readings = "field1=" + String(Sensor.getWaterTemp()) + " & field2=" + String(Sensor.getConductivity()) 
+    + " & field3=" + String(Sensor.getPH()) + " & field4=" + String(Sensor.getOxygen())
+    + " & field5=" + String(Sensor.getAirTemp()) + " & field6=" + String(Sensor.getHumidity())
+    + " & field7=" + String(Sensor.getCarbon()) + " & field8=" + String(Sensor.getPar());
+    
+    Serial6.print(Readings);
+  }
 
 
 //PRINT DATA TO LCD DISPLAY IN TWO SEPARATE PAGES
