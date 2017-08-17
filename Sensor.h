@@ -356,15 +356,15 @@ class SENSOR {
       Serial.print("CO2 Concentration: ");
       Serial.print("\t");
       Serial.print(carbon);
-      Serial.println("ppm"); 
+      Serial.println(" ppm"); 
     }
 
 //PRINT PR DATA TO SERIAL MONITOR
     void printPR() {
       Serial.print("PAR Level: ");
-      Serial.print("\t");
+      Serial.print("\t\t");
       Serial.print(par);
-      Serial.println("micromoles/m*s"); 
+      Serial.println(" micromoles/m*s"); 
     }
     
 /*************************************************************************************************
