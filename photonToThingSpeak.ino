@@ -91,7 +91,7 @@ void ThingSpeakUpdate(String readings)
 
     if(!client.connected()){
         client.stop();
-    }
+    } 
     client.flush();
     client.stop();
 }
