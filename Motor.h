@@ -19,7 +19,8 @@ class MOTOR {
     int solenoid_pin = 37; 
 
     //TIMING VARIABLES
-    long pumpRunTime = 3000;
+    long runTimePH = 3000;
+    long runTimeEC = 6000;
     long solenoidRunTime = 5000;
     unsigned long currentMillis;
     unsigned long previousMillis;
@@ -66,7 +67,7 @@ class MOTOR {
       digitalWrite(fertA_pin, LOW);     
       currentMillis = millis();
       previousMillis = millis();      
-      while (currentMillis - previousMillis < pumpRunTime) { currentMillis = millis(); }
+      while (currentMillis - previousMillis < runTimeEC) { currentMillis = millis(); }
       digitalWrite(fertA_pin, HIGH);
       delay(1000);
       
@@ -74,7 +75,7 @@ class MOTOR {
       digitalWrite(fertB_pin, LOW);
       currentMillis = millis();
       previousMillis = millis();     
-      while (currentMillis - previousMillis < pumpRunTime) { currentMillis = millis(); }   
+      while (currentMillis - previousMillis < runTimeEC) { currentMillis = millis(); }   
       digitalWrite(fertB_pin, HIGH);
       delay(1000);
       
@@ -99,7 +100,7 @@ class MOTOR {
       digitalWrite(pHup_pin, LOW);    
       currentMillis = millis();
       previousMillis = millis();     
-      while (currentMillis - previousMillis < pumpRunTime) { currentMillis = millis(); }  
+      while (currentMillis - previousMillis < runTimePH) { currentMillis = millis(); }  
       digitalWrite(pHup_pin, HIGH);
       delay(1000);
       Serial.println("Completed");
@@ -111,7 +112,7 @@ class MOTOR {
       digitalWrite(pHdown_pin, LOW);      
       currentMillis = millis();
       previousMillis = millis();     
-      while (currentMillis - previousMillis < pumpRunTime) { currentMillis = millis(); }     
+      while (currentMillis - previousMillis < runTimePH) { currentMillis = millis(); }     
       digitalWrite(pHdown_pin, HIGH);
       delay(1000);
       Serial.println("Completed");
