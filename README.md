@@ -1,5 +1,7 @@
 # hydroponicAutomation
 
+![plants](https://user-images.githubusercontent.com/24355731/29591109-ac4c0f20-8762-11e7-80c6-abf0c91c7b5a.jpg)
+
 A program to monitor and control the variables of a hydroponic system
 
 This is a Summer Undergraduate Research Project being completed at San Antonio College
@@ -16,6 +18,8 @@ Faculty Advisor:
 Pete R. Ortega
 
 View the most recent data on ThingSpeak: https://thingspeak.com/channels/298095
+
+![hydroSystem](https://user-images.githubusercontent.com/24355731/29591133-c6ec196a-8762-11e7-983a-4e89e0cf747d.JPG)
 
 ![wiring-diagram](https://user-images.githubusercontent.com/24355731/27982105-e6b00328-635f-11e7-8721-fe0cd6cad272.JPG)
 ![chart1](https://user-images.githubusercontent.com/24355731/29590969-1c44d178-8762-11e7-8570-320660e3b8bf.JPG)
