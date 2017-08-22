@@ -5,7 +5,7 @@
 This is a Summer Undergraduate Research Project completed at San Antonio College in 2017
 
 Original contributors:
-Marshall Amey,
+Marshall J. Amey,
 Kathya Alfaro,
 Isaac Olson,
 and Madeline Wrzesinski
