@@ -17,6 +17,16 @@ The goal of this research project was to design, build, and test a low-cost prot
 
 View the most recent data on ThingSpeak: https://thingspeak.com/channels/298095
 
+ADDRESSES
+PH - Atlas Scientific pH Sensor
+EC - Atlas Scientific Conductivity Sensor
+DO - Atlas Scientific Dissolved Oxygen Sensor
+WT - Altas Scientific Water Temperature Sensor
+AT - Air Temperature
+HM - Humdity
+CB - Carbon Dioxide
+PR - Photosynthetically Active Radiation
+
 ![hydroSystem](https://user-images.githubusercontent.com/24355731/29591133-c6ec196a-8762-11e7-983a-4e89e0cf747d.JPG)
 
 ![wiring-diagram](https://user-images.githubusercontent.com/24355731/27982105-e6b00328-635f-11e7-8721-fe0cd6cad272.JPG)
