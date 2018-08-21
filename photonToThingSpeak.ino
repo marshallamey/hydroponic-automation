@@ -17,7 +17,7 @@ TCPClient client;
 // Thinkspeak channel information
 char thingSpeakAddress[] = "api.thingspeak.com";
 unsigned long myChannelNumber = 298095;
-String myWriteAPIKey = "F8Q6F3XFDI3QDLUY";
+String myWriteAPIKey = "";
 
 
 void setup() 
